@@ -1,0 +1,13 @@
+fits_dir: !!python/str "./test"
+date: !!python/str "20120606"
+wavelength: !!python/int "1600"
+sub_reg_coords: [155,270,200,290]
+coords_type: !!python/str "arc"
+bin_frac: !!python/int "1"
+
+temp_dir: !!python/str "./test"
+mmap_derotate: !!python/str "y"
+save_temp: !!python/str "n"
+
+mmap_spectra: !!python/str "y"
+num_segments: !!python/int "2"
