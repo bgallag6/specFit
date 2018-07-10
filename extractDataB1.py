@@ -59,22 +59,24 @@ def datacube(flist_chunk):
     
     exposure = np.empty((nf1))  # exposure time
     timestamp = np.empty((nf1))  # time stamps
-    vis_avg = np.zeros((midmap.data.shape[0], midmap.data.shape[1]))  # for averaged visual image
-    dCube = np.empty((nf1, midmap.data.shape[0], midmap.data.shape[1]), dtype=np.int16)  # save as int16, since that is what original is
+    
+    imSample = convert_grayscale(flist_chunk[0])
+    vis_avg = np.zeros((imSample.shape[0], imSample.shape[1]))  # for averaged visual image
+    dCube = np.empty((nf1, imSample.shape[0], imSample.shape[1]), dtype=np.int16)  # save as int16, since that is what original is
     
     start = timer()
     T1 = 0
     
     count = 0
 
-    # loop through datacube and extract pixel data and time values
+    # loop through datacube and extract pixel data and time/exposure values
     for filename in flist_chunk:
         dCube[count] = convert_grayscale(filename)
-        exposure[count] = (smap.exposure_time).value
-        vis_avg += (dmap.data / (smap.exposure_time).value)  # create normalized average visual image
-        t0 = get_exif(filename)
-        t1 = t0['DateTime']
-        t2 = t0['DateTimeDigitized']
+        imData = get_exif(filename)
+        exposure[count] = imData['ExposureTime'][0] / imData['ExposureTime'][1]
+        vis_avg += dCube[count] / exposure[count]  # create normalized average visual image
+        t1 = imData['DateTime']
+        t2 = imData['DateTimeDigitized']
         timestamp[count] = datetime.datetime.strptime(t1,'%Y:%m:%d %H:%M:%S').timestamp()
         count += 1        
         

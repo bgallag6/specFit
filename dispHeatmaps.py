@@ -14,6 +14,8 @@ from matplotlib import cm
 import yaml
 import sunpy
 
+plt.rcParams["font.family"] = "Times New Roman"
+font_size = 27  # set the font size to be used for all text - titles, tick marks, text, labels  
    
 # define Gaussian-fitting function
 def Gauss(f, P, fp, fw):
@@ -29,18 +31,14 @@ savefig = False
 
   
 # 11-param-list
-titles = [r'Power Law Slope-Coefficient [flux] - A', r'(b) Power Law Index n', r'Power Law Tail - C', r'Gaussian Amplitude [flux] - α', r'(c) Gauss. Loc. β [min]', r'Gaussian Width - σ', 'F-Statistic', r'Gaussian Amplitude Scaled - α', r'$r$-Value: Correlation Coefficient', r'(d) Rollover Period $T_r$ [min]', r'$\chi^2$']
+titles = [r'Power Law Slope-Coefficient [flux] - A', r'(b) Power Law Index n', r'Power Law Tail - C', r'Lorentzian Amplitude [flux] - α', r'(c) Lorentz. Loc. β [min]', r'Lorentzian Width - σ', 'F-Statistic', r'Lorentzian Amplitude Scaled - α', r'$r$-Value: Correlation Coefficient', r'(d) Rollover Period $T_r$ [min]', r'$\chi^2$']
 names = ['slope_coeff', 'index', 'tail', 'lorentz_amp', 'lorentz_loc', 'lorentz_wid', 'f_test', 'lorentz_amp_scaled', 'r_value', 'roll_freq', 'chisqr']
 
 # load parameter array and visual images from file tree structure 
-heatmaps = np.load('%s/Processed/Output/%s/%i/param.npy' % (directory, date, wavelength))
+h_map = np.load('%s/Processed/Output/%s/%i/param.npy' % (directory, date, wavelength))
 visual = np.load('%s/Processed/Output/%s/%i/visual.npy'% (directory, date, wavelength))  
 
-visual = visual[1:-1,1:-1]  # to make same size as heatmaps (if using 3x3 pixel box averaging)
-h_map = heatmaps    
-
-plt.rcParams["font.family"] = "Times New Roman"
-font_size = 27  # set the font size to be used for all text - titles, tick marks, text, labels    
+visual = visual[1:-1,1:-1]  # to make same size as heatmaps (if using 3x3 pixel box averaging)  
 
 xdim = int(np.floor(h_map.shape[2]/100))
 ydim = int(np.floor(h_map.shape[1]/100))
@@ -51,7 +49,7 @@ y_ticks = [100*i for i in range(ydim+1)]
 x_ind = x_ticks
 y_ind = y_ticks    
 
-# generate p-value heatmap + masked Gaussian component heatmaps
+# generate p-value heatmap + masked Lorentzian component heatmaps
 df1, df2 = 3, 6  # degrees of freedom for model M1, M2
 p_val = ff.sf(h_map[6], df1, df2)
 
@@ -62,8 +60,8 @@ amp_mask = np.copy(h_map[3])
 loc_mask = np.copy(h_map[4])
 wid_mask = np.copy(h_map[5])    
 
-# mask the Gaussian component arrays with NaNs if above threshold 
-p_mask[p_val > mask_thresh] = np.NaN  # for every element in p_mask, if the corresponding element in p_val is greater than the threshold, set that value to NaN
+# mask the Lorenztian component arrays with NaNs if above threshold 
+p_mask[p_val > mask_thresh] = np.NaN
 amp_mask[p_val > mask_thresh] = np.NaN
 loc_mask[p_val > mask_thresh] = np.NaN
 wid_mask[p_val > mask_thresh] = np.NaN    
@@ -74,8 +72,8 @@ total_pix = p_val.shape[0]*p_val.shape[1]
 mask_percent = ((np.float(count))/total_pix)*100
 
 h_map[4] = (1./np.exp(h_map[4]))/60.               
-loc_mask = (1./np.exp(loc_mask))/60.  # convert Gaussian location to minutes
-plots = [p_mask, amp_mask, loc_mask, wid_mask]  # make array of masked plots to iterate over
+loc_mask = (1./np.exp(loc_mask))/60.  # convert Lorentzian location to minutes
+plots = [p_mask, amp_mask, loc_mask, wid_mask]
 
 if h_map.shape[2] > h_map.shape[1]:
     aspect_ratio = float(h_map.shape[2]) / float(h_map.shape[1])
@@ -88,7 +86,7 @@ else:
     fig_height = 10*aspect_ratio  # works better for 20130626
 
 
-for i in range(h_map.shape[0]):
+for i in range(4,5):
     
     fig = plt.figure(figsize=(fig_width,fig_height))
     ax = plt.gca()  # get current axis -- to set colorbar 
@@ -130,7 +128,7 @@ for i in range(h_map.shape[0]):
     
     if i == 3 or i == 4 or i == 5:   
         fig = plt.figure(figsize=(fig_width,fig_height))
-        ax = plt.gca()  # get current axis -- to set colorbar 
+        ax = plt.gca() 
         
         plt.title(r'%s; p < %0.3f | f$_{masked}$ = %0.1f%s' % (titles[i], mask_thresh, mask_percent, '%'), y = 1.02, fontsize=font_size)
 
@@ -152,7 +150,7 @@ for i in range(h_map.shape[0]):
         if savefig == True:
             plt.savefig('%s/Processed/Output/%s/%i/Figures/%s_%i_%s_mask_%i.pdf' % (directory, date, wavelength, date, wavelength, names[i], (1./mask_thresh)), format='pdf', bbox_inches='tight')
         
-    
+    # plot histogram
     flat_param = np.reshape(h_map[i], (h_map[i].shape[0]*h_map[i].shape[1]))
     
     # calculate some statistics
@@ -167,19 +165,17 @@ for i in range(h_map.shape[0]):
     plt.xlim(h_min, h_max)
     y, x, _ = plt.hist(flat_param, bins=200, range=(h_min, h_max))
     
-    #n, bins, patches = plt.hist(flat_param, bins=200, range=(h_min, h_max))
     n=y[1:-2]
     bins=x[1:-2]
     elem = np.argmax(n)
     bin_max = bins[elem]
-    plt.ylim(0, y.max()*1.1)      
-    
+    plt.ylim(0, y.max()*1.1)         
     
     plt.vlines(bin_max, 0, y.max()*1.1, color='black', linestyle='dotted', linewidth=2., label='mode=%0.4f' % bin_max)  
     plt.vlines(0, 0, y.max()*1.1, color='white', linestyle='dashed', linewidth=1.5, label='sigma=%0.4f' % sigma)
     legend = plt.legend(loc='upper right', prop={'size':20}, labelspacing=0.35)
     for label in legend.get_lines():
-        label.set_linewidth(2.0)  # the legend line width
+        label.set_linewidth(2.0)
     
     if savefig == True:
         plt.savefig('%s/Processed/Output/%s/%i/Figures/%s_%i_Histogram_%s.pdf' % (directory, date, wavelength, date, wavelength, names[i]), format='pdf', bbox_inches='tight')
@@ -188,20 +184,15 @@ for i in range(h_map.shape[0]):
 # generate visual images
 vis = visual
           
-v_min = np.percentile(vis,1)  # set heatmap vmin to 1% of data (could lower to 0.5% or 0.1%)
-v_max = np.percentile(vis,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)  
+v_min = np.percentile(vis,1)
+v_max = np.percentile(vis,99) 
 
 fig = plt.figure(figsize=(fig_width,fig_height))
 ax = plt.gca()
-#ax = plt.subplot2grid((1,31),(0, 0), colspan=30, rowspan=1)  #to substitute for colorbar space
-#plt.subplots_adjust(right=0.875)  #to substitute for colorbar space
-plt.title('Visual Average', y = 1.02, fontsize=font_size, fontname="Times New Roman")  # no date / wavelength
-#plt.title('(f) %i $\AA$' % wavelength, y = 1.02, fontsize=font_size, fontname="Times New Roman")  # no date / wavelength
-#im = ax.imshow(h_map[i], vmin=vmin[i], vmax=vmax[i])
-#im = ax.imshow(vis[i], cmap='sdoaia%i' % wavelength, vmin = v_min, vmax = v_max)   
+plt.title('Visual Average', y = 1.02, fontsize=font_size)
 im = ax.imshow(np.flipud(vis), cmap='sdoaia%i' % wavelength, vmin = v_min, vmax = v_max)
-plt.xticks(x_ticks,x_ind,fontsize=font_size, fontname="Times New Roman")
-plt.yticks(y_ticks,y_ind,fontsize=font_size, fontname="Times New Roman")
+plt.xticks(x_ticks,x_ind,fontsize=font_size)
+plt.yticks(y_ticks,y_ind,fontsize=font_size)
 ax.tick_params(axis='both', which='major', pad=10)
 divider = make_axes_locatable(ax)
 cax = divider.append_axes("right", size="3%", pad=0.07)
@@ -209,4 +200,4 @@ cbar = plt.colorbar(im,cax=cax)
 cbar.ax.tick_params(labelsize=font_size, pad=5) 
 
 if savefig == True:
-    plt.savefig('%s/DATA/Output/%s/%i/Figures/%s_%i_visual_average.pdf' % (directory, date, wavelength, date, wavelength), format='pdf', bbox_inches='tight')
+    plt.savefig('%s/Processed/Output/%s/%i/Figures/%s_%i_visual_average.pdf' % (directory, date, wavelength, date, wavelength), format='pdf', bbox_inches='tight')
