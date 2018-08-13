@@ -12,6 +12,7 @@ import matplotlib.patches as patches
 import scipy.signal
 from pylab import axvline
 import sunpy
+import sunpy.cm
 from scipy import fftpack
 from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -30,7 +31,23 @@ def update(val):
     mask_val = slid_mask.val
     return mask_val
 
+def colorBar():
+    global cax1
+    global cbar1
+    # design colorbar for heatmaps
+    divider1 = make_axes_locatable(ax1)
+    cax1 = divider1.append_axes("right", size="3%", pad=0.07)
+    cbar1 = plt.colorbar(im,cax=cax1)
+    #cbar.set_label('%s' % cbar_labels[1], size=15, labelpad=10)
+    cbar1.ax.tick_params(labelsize=13, pad=3)   
+    plt.colorbar(im,cax=cax1)
+    plt.draw()
+
 def plotMap(p):
+    global cbar1
+    global im
+    cbar1.remove()
+    im.remove()
     param = h_map[p]
     pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
     pNaN = pflat[~np.isnan(pflat)]
@@ -42,14 +59,14 @@ def plotMap(p):
         c_map = 'jet'
     im = ax1.imshow(param, cmap=c_map, interpolation='nearest', vmin=h_min, vmax=h_max, picker=True)
     ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[p]), y = 1.01, fontsize=17)
-    plt.colorbar(im,cax=cax)
-    plt.draw()
-
+    colorBar()
+    
 def plotMask(p):
     global mask_val
-    ax1.clear()
-    ax1.set_xlim(0, h_map.shape[2]-1)
-    ax1.set_ylim(0, h_map.shape[1]-1)  
+    global cbar1
+    global im
+    cbar1.remove()
+    im.remove()  
     
     param = h_map[p]
     pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
@@ -68,14 +85,13 @@ def plotMask(p):
     total_pix = p_val.shape[0]*p_val.shape[1]
     mask_percent = ((np.float(count))/total_pix)*100
     
-    ax1.set_title(r'%s: %i $\AA$ | %s | $f_{masked}$ = %0.1f%s' % (date_title, wavelength, titles[p], mask_percent, '%'), y = 1.01, fontsize=17)
     if p == 4:
         c_map = 'jet_r'
     else:
         c_map = 'jet'
     im = ax1.imshow(param_mask, cmap=c_map, interpolation='nearest', vmin=h_min, vmax=h_max, picker=True)
-    plt.colorbar(im,cax=cax)
-    plt.draw()
+    ax1.set_title(r'%s: %i $\AA$ | %s | $f_{masked}$ = %0.1f%s' % (date_title, wavelength, titles[p], mask_percent, '%'), y = 1.01, fontsize=17)
+    colorBar()
         
 def histMask(p):
     global mask_val
@@ -110,6 +126,10 @@ class Index(object):
         
     def roll(self, event):  # meh, should probably fix this
         global marker
+        global cbar1
+        global im
+        cbar1.remove()
+        im.remove()
         marker = 2
         paramA = h_map[0]
         paramn = h_map[1]
@@ -120,11 +140,14 @@ class Index(object):
         h_max = np.percentile(param,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
         im = ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, vmax=h_max,  picker=True)
         ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[2]), y = 1.01, fontsize=17)
-        plt.colorbar(im,cax=cax)
-        plt.draw()      
+        colorBar()      
         
     def lorentz_amp(self, event):
         global marker
+        global cbar1
+        global im
+        cbar1.remove()
+        im.remove()
         marker = 3
         param = h_map[3]
         pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
@@ -133,11 +156,14 @@ class Index(object):
         h_max = np.percentile(pNaN,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
         im = ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, vmax=h_max,  picker=True)
         ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[3]), y = 1.01, fontsize=17)
-        plt.colorbar(im,cax=cax)
-        plt.draw()
+        colorBar() 
     
     def lorentz_loc(self, event):
         global marker
+        global cbar1
+        global im
+        cbar1.remove()
+        im.remove()
         marker = 4
         param = h_map[4]
         pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
@@ -146,11 +172,14 @@ class Index(object):
         h_max = np.percentile(pNaN,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
         im = ax1.imshow(param, cmap='jet_r', interpolation='nearest', vmin=h_min, vmax=h_max,  picker=True)
         ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[4]), y = 1.01, fontsize=17)
-        plt.colorbar(im,cax=cax)
-        plt.draw()
+        colorBar() 
         
     def lorentz_wid(self, event):
         global marker
+        global cbar1
+        global im
+        cbar1.remove()
+        im.remove()
         marker = 5
         param = h_map[5]
         pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
@@ -159,11 +188,14 @@ class Index(object):
         h_max = np.percentile(pNaN,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
         im = ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, vmax=h_max,  picker=True)
         ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[5]), y = 1.01, fontsize=17)
-        plt.colorbar(im,cax=cax)
-        plt.draw()
+        colorBar() 
         
     def fstat(self, event):
         global marker
+        global cbar1
+        global im
+        cbar1.remove()
+        im.remove()
         marker = 6
         param = h_map[6]
         pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
@@ -172,17 +204,19 @@ class Index(object):
         h_max = np.percentile(pNaN,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
         im = ax1.imshow(param, cmap='jet', interpolation='none', vmin=h_min, vmax=h_max,  picker=True)
         ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[6]), y = 1.01, fontsize=17)
-        plt.colorbar(im,cax=cax)
-        plt.draw()
+        colorBar() 
         
     def visual(self, event):
+        global cbar1
+        global im
+        cbar1.remove()
+        im.remove()
         param = vis
         h_min = np.percentile(param,1)  # set heatmap vmin to 1% of data (could lower to 0.5% or 0.1%)
         h_max = np.percentile(param,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
         im = ax1.imshow(param, cmap='sdoaia%i' % wavelength, interpolation='nearest', vmin=h_min, vmax=h_max, picker=True)
         ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[7]), y = 1.01, fontsize=17)
-        plt.colorbar(im,cax=cax)
-        plt.draw()
+        colorBar()
     
     def hist(self, event):
         global marker
@@ -352,18 +386,19 @@ def onclick(event):
                 label.set_linewidth(2.0)  # the legend line width   
 
     return ix, iy
-    
-# define combined-fitting function (Model M2)
-def LorentzPowerBase(f2, A2, n2, C2, P2, fp2, fw2):
-    return A2*f2**-n2 + C2 + P2*(1./ ((np.pi*fw2)*(1.+((np.log(f2)-fp2)/fw2)**2)))
 
+    
 # define Power-Law-fitting function (Model M1)
 def PowerLaw(f, A, n, C):
     return A*f**-n + C
         
-# define Gaussian-fitting function
+# define Lorentzian-fitting function
 def Lorentz(f, P, fp, fw):
     return P*(1./ ((np.pi*fw)*(1.+((np.log(f)-fp)/fw)**2))) 
+
+# define combined-fitting function (Model M2)
+def LorentzPowerBase(f2, A2, n2, C2, P2, fp2, fw2):
+    return A2*f2**-n2 + C2 + P2*(1./ ((np.pi*fw2)*(1.+((np.log(f2)-fp2)/fw2)**2)))
     
 
 """
@@ -407,108 +442,100 @@ pidxs = np.where(sample_freq > 0)
 
 plt.rcParams["font.family"] = "Times New Roman"
 font_size = 20
+    
+global f_fit
 
-if 1:
-    
-    global f_fit
-    
-    freqs = sample_freq[pidxs]
-    #print(len(freqs))
-    f_fit = np.linspace(freqs[0],freqs[len(freqs)-1],int(spectra.shape[2]))   
-    
-    
-    h_map = np.load('%s/Processed/Output/%s/%i/param.npy' % (directory, date, wavelength))
+freqs = sample_freq[pidxs]
+f_fit = np.linspace(freqs[0],freqs[len(freqs)-1],int(spectra.shape[2]))   
+
+
+h_map = np.load('%s/Processed/Output/%s/%i/param.npy' % (directory, date, wavelength))
  
-    vis = np.load('%s/Processed/Output/%s/%i/visual.npy' % (directory, date, wavelength))
+vis = np.load('%s/Processed/Output/%s/%i/visual.npy' % (directory, date, wavelength))
 
-    h_map[4] = (1./(np.exp(h_map[4]))/60.)
-    
-    # create list of titles and colorbar names for display on the figures
-    titles = ['Power Law Slope Coeff.', 'Power Law Index', 'Rollover [min]', 'Lorentzian Amplitude', 'Lorentzian Location [min]', 'Lorentzian Width', 'F-Statistic', 'Averaged Visual Image']
-    date_title = '%i/%02i/%02i' % (int(date[0:4]),int(date[4:6]),int(date[6:8]))
-    
-    # create figure with heatmap and spectra side-by-side subplots
-    fig1 = plt.figure(figsize=(20,10))
-    ax1 = plt.gca()
-    ax1 = plt.subplot2grid((30,31),(4, 1), colspan=14, rowspan=25)
+h_map[4] = (1./(np.exp(h_map[4]))/60.)
 
-    ax1.set_xlim(0, h_map.shape[2]-1)
-    ax1.set_ylim(0, h_map.shape[1]-1)  
-    ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[1]), y = 1.01, fontsize=17)
-    
-    # was getting error "'AxesImage' object is not iterable"
-    # - found: "Each element in img needs to be a sequence of artists, not a single artist."
-    param = h_map[1]  # set initial heatmap to power law index     
-    h_min = np.percentile(param,1)  # set heatmap vmin to 1% of data (could lower to 0.5% or 0.1%)
-    h_max = np.percentile(param,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
-    im, = ([ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, vmax=h_max,  picker=True)])
-    
-    # design colorbar for heatmaps
-    divider = make_axes_locatable(ax1)
-    cax = divider.append_axes("right", size="3%", pad=0.07)
-    cbar = plt.colorbar(im,cax=cax)
-    #cbar.set_label('%s' % cbar_labels[1], size=15, labelpad=10)
-    cbar.ax.tick_params(labelsize=13, pad=3)   
-    
-    
-    # make toggle buttons to display each parameter's heatmap
-    axcoeff = plt.axes([0.01, 0.9, 0.05, 0.063])
-    axindex = plt.axes([0.07, 0.9, 0.05, 0.063])
-    axroll = plt.axes([0.13, 0.9, 0.05, 0.063])
-    axlorentz_amp = plt.axes([0.19, 0.9, 0.05, 0.063])
-    axlorentz_loc = plt.axes([0.25, 0.9, 0.05, 0.063])
-    axlorentz_wid = plt.axes([0.31, 0.9, 0.05, 0.063])
-    axfstat = plt.axes([0.37, 0.9, 0.05, 0.063])
-    axvisual = plt.axes([0.43, 0.9, 0.05, 0.063])
-    #axscatter = plt.axes([0.49, 0.9, 0.05, 0.063])
-    axhist = plt.axes([0.49, 0.9, 0.05, 0.063])
-    axmask = plt.axes([0.55, 0.9, 0.05, 0.063])
-    axslider = plt.axes([0.64, 0.915, 0.15, 0.03])
-    axsaveFig = plt.axes([0.91, 0.9, 0.05, 0.063])
+# create list of titles and colorbar names for display on the figures
+titles = ['Power Law Slope Coeff.', 'Power Law Index', 'Rollover [min]', 'Lorentzian Amplitude', 'Lorentzian Location [min]', 'Lorentzian Width', 'F-Statistic', 'Averaged Visual Image']
+date_title = '%i/%02i/%02i' % (int(date[0:4]),int(date[4:6]),int(date[6:8]))
 
-    
+# create figure with heatmap and spectra side-by-side subplots
+fig1 = plt.figure(figsize=(20,10))
 
-    # set up spectra subplot
-    ax2 = plt.subplot2grid((30,31),(4, 17), colspan=13, rowspan=24)
-    ax2.loglog()
-    ax2.set_xlim(10**-4.5, 10**-1.3)
-    ax2.set_ylim(10**-5, 10**0)  
-    
-    fig1.canvas.mpl_connect('button_press_event', onclick)
+ax1 = plt.gca()
+ax1 = plt.subplot2grid((30,31),(4, 1), colspan=14, rowspan=25)
+ax1.set_xlim(0, h_map.shape[2]-1)
+ax1.set_ylim(0, h_map.shape[1]-1)  
+ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[1]), y = 1.01, fontsize=17)
 
-    ax2.set_title('Spectra Fit: Pixel ( , )', fontsize=15)
-    ax2.set_xlabel('Frequency [Hz]', fontsize=font_size-3, labelpad=5)
-    ax2.set_ylabel('Power', fontsize=font_size-3, labelpad=5)
-    plt.tight_layout()
-    
-    
-    # add callbacks to each button - linking corresponding action
-    callback = Index()
-    
-    bcoeff = Button(axcoeff, 'Coeff.')
-    bcoeff.on_clicked(callback.coeff)
-    bindex = Button(axindex, 'Index')
-    bindex.on_clicked(callback.index)
-    broll = Button(axroll, 'Rollover')
-    broll.on_clicked(callback.roll)
-    blorentz_amp = Button(axlorentz_amp, 'Lorentz. Amp')
-    blorentz_amp.on_clicked(callback.lorentz_amp)
-    blorentz_loc = Button(axlorentz_loc, 'Lorentz. Loc')
-    blorentz_loc.on_clicked(callback.lorentz_loc)
-    blorentz_wid = Button(axlorentz_wid, 'Lorentz. Wid')
-    blorentz_wid.on_clicked(callback.lorentz_wid)
-    bfstat = Button(axfstat, 'F-Stat')
-    bfstat.on_clicked(callback.fstat)
-    bvisual = Button(axvisual, 'Visual')
-    bvisual.on_clicked(callback.visual)
-    bhist = Button(axhist, 'Hist.')
-    bhist.on_clicked(callback.hist)
-    bmask = Button(axmask, 'Mask')
-    bmask.on_clicked(callback.mask)
-    bsaveFig = Button(axsaveFig, 'Save')
-    bsaveFig.on_clicked(callback.saveFig)
-    
-    slid_mask = Slider(axslider, 'Masking', 0.001, 0.1, valinit=0.005)
-    slid_mask.on_changed(update)
-    
-plt.draw()
+# was getting error "'AxesImage' object is not iterable"
+# - found: "Each element in img needs to be a sequence of artists, not a single artist."
+param = h_map[1]  # set initial heatmap to power law index     
+h_min = np.percentile(param,1)  # set heatmap vmin to 1% of data (could lower to 0.5% or 0.1%)
+h_max = np.percentile(param,99)  # set heatmap vmax to 99% of data (could up to 99.5% or 99.9%)
+im, = ([ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, vmax=h_max,  picker=True)])
+
+# design colorbar for heatmaps
+global cbar1
+divider = make_axes_locatable(ax1)
+cax1 = divider.append_axes("right", size="3%", pad=0.07)
+cbar1 = plt.colorbar(im,cax=cax1)
+#cbar.set_label('%s' % cbar_labels[1], size=15, labelpad=10)
+cbar1.ax.tick_params(labelsize=13, pad=3)   
+
+# make toggle buttons to display each parameter's heatmap
+axcoeff = plt.axes([0.01, 0.9, 0.05, 0.063])
+axindex = plt.axes([0.07, 0.9, 0.05, 0.063])
+axroll = plt.axes([0.13, 0.9, 0.05, 0.063])
+axlorentz_amp = plt.axes([0.19, 0.9, 0.05, 0.063])
+axlorentz_loc = plt.axes([0.25, 0.9, 0.05, 0.063])
+axlorentz_wid = plt.axes([0.31, 0.9, 0.05, 0.063])
+axfstat = plt.axes([0.37, 0.9, 0.05, 0.063])
+axvisual = plt.axes([0.43, 0.9, 0.05, 0.063])
+axhist = plt.axes([0.49, 0.9, 0.05, 0.063])
+axmask = plt.axes([0.55, 0.9, 0.05, 0.063])
+axslider = plt.axes([0.64, 0.915, 0.15, 0.03])
+axsaveFig = plt.axes([0.91, 0.9, 0.05, 0.063])
+
+# set up spectra subplot
+ax2 = plt.subplot2grid((30,31),(4, 17), colspan=13, rowspan=24)
+ax2.loglog()
+ax2.set_xlim(10**-4.5, 10**-1.3)
+ax2.set_ylim(10**-5, 10**0)  
+
+fig1.canvas.mpl_connect('button_press_event', onclick)
+
+ax2.set_title('Spectra Fit: Pixel ( , )', fontsize=15)
+ax2.set_xlabel('Frequency [Hz]', fontsize=font_size-3, labelpad=5)
+ax2.set_ylabel('Power', fontsize=font_size-3, labelpad=5)
+plt.tight_layout()
+
+
+# add callbacks to each button - linking corresponding action
+callback = Index()
+
+bcoeff = Button(axcoeff, 'Coeff.')
+bcoeff.on_clicked(callback.coeff)
+bindex = Button(axindex, 'Index')
+bindex.on_clicked(callback.index)
+broll = Button(axroll, 'Rollover')
+broll.on_clicked(callback.roll)
+blorentz_amp = Button(axlorentz_amp, 'Lorentz. Amp')
+blorentz_amp.on_clicked(callback.lorentz_amp)
+blorentz_loc = Button(axlorentz_loc, 'Lorentz. Loc')
+blorentz_loc.on_clicked(callback.lorentz_loc)
+blorentz_wid = Button(axlorentz_wid, 'Lorentz. Wid')
+blorentz_wid.on_clicked(callback.lorentz_wid)
+bfstat = Button(axfstat, 'F-Stat')
+bfstat.on_clicked(callback.fstat)
+bvisual = Button(axvisual, 'Visual')
+bvisual.on_clicked(callback.visual)
+bhist = Button(axhist, 'Hist.')
+bhist.on_clicked(callback.hist)
+bmask = Button(axmask, 'Mask')
+bmask.on_clicked(callback.mask)
+bsaveFig = Button(axsaveFig, 'Save')
+bsaveFig.on_clicked(callback.saveFig)
+
+slid_mask = Slider(axslider, 'Masking', 0.001, 0.1, valinit=0.005)
+slid_mask.on_changed(update)

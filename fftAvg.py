@@ -164,7 +164,7 @@ if wavelength in [1600,1700]:
 else:
     time_step = 12
 
-t_interp = np.linspace(0, time[len(time)-1], (time[len(time)-1]/time_step)+1)  # interpolate onto default-cadence time-grid
+t_interp = np.linspace(0, time[-1], (time[-1]//time_step)+1)  # interpolate onto default-cadence time-grid
     
 #n_segments = num_seg
 n = len(t_interp)
