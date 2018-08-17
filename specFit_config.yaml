@@ -1,13 +1,24 @@
-fits_dir: !!python/str "./test"
+fits_dir: !!python/str "./test/Images/20120606/1600"
 date: !!python/str "20120606"
 wavelength: !!python/int "1600"
 sub_reg_coords: [155,270,200,290]
-coords_type: !!python/str "arc"
 bin_frac: !!python/int "1"
 
-temp_dir: !!python/str "./test"
-mmap_derotate: !!python/str "y"
+processed_dir: !!python/str "./test/Processed/20120606/1600"
+mmap_datacube: !!python/str "y"
 save_temp: !!python/str "n"
 
 mmap_spectra: !!python/str "y"
 num_segments: !!python/int "2"
+M1_low: [-0.002, 0.3, -0.01]
+M1_high: [0.002, 6., 0.01]
+M2_low: [0., 0.3, -0.01, 0.00001, -6.5, 0.05]
+M2_high: [0.002, 6., 0.01, 0.2, -4.6, 0.8]
+spec_unc: !!python/str "adhoc"
+
+M1_guess:
+M2_guess:
+
+save_fig: False
+
+specVis_dir: !!python/str "./test/Processed/20120606/1600"
