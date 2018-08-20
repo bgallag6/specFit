@@ -178,3 +178,6 @@ with open('log.txt', 'a+') as file:
     file.write("%s: Generate Parameter Heatmaps" % scriptName + "\n")
     file.write("--------------------------------------" + "\n")
     file.write("Parameter heatmap figures saved: %s" % savefig + "\n\n")
+    file.write("========================================" + "\n")
+    file.write("++++++++++++++++++++++++++++++++++++++++" + "\n")
+    file.write("========================================" + "\n\n")

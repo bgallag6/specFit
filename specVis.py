@@ -388,15 +388,22 @@ mask_val = 0.005
 toggle, toggle2 = 0, 0
 
 global freqs
+
 ### determine frequency values that FFT will evaluate
-if wavelength == 1600 or wavelength == 1700:
-    time_step = 24
+## use frequencies array if exists
+if os.path.isfile('%s/frequencies.npy' % directory):
+    freqs = np.load('%s/frequencies.npy' % directory)
 else:
-    time_step = 12
-freq_size = (spectra.shape[2]*2)+1
-sample_freq = fftpack.fftfreq(freq_size, d=time_step)
-pidxs = np.where(sample_freq > 0)    
-freqs = sample_freq[pidxs]
+    if wavelength in [1600, 1700]:
+        time_step = 24
+    else:
+        time_step = 12
+    
+    freq_size = (spectra.shape[2]*2)+1
+    sample_freq = fftpack.fftfreq(freq_size, d=time_step)
+    pidxs = np.where(sample_freq > 0)    
+    freqs = sample_freq[pidxs]
+
 
 # assign equal weights to all parts of the curve
 df = np.log10(freqs[1:len(freqs)]) - np.log10(freqs[0:len(freqs)-1])

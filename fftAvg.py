@@ -122,6 +122,7 @@ date = cfg['date']
 wavelength = cfg['wavelength']
 mmap_datacube = cfg['mmap_datacube']
 n_segments = cfg['num_segments']  # break data into # segments of equal length
+tStep = cfg["time_step"]
 
 if mmap_datacube == 'y':
     cube = np.load('%s/dataCube.npy' % directory, mmap_mode='r')
@@ -145,20 +146,31 @@ for i in range(size):
     if rank == i:
         subcube = chunks[i]
 
-# determine frequency values that FFT will evaluate
+"""
 if wavelength in [1600,1700]:
     time_step = 24
 else:
     time_step = 12
+"""
 
+if type(tStep) == float:
+    timeStep = tStep
+elif type(tStep) == str:
+    tDiff = list(np.diff(timestamp))
+    if tStep == "min":
+        timeStep = np.min(tDiff)
+    elif tStep == "mode":
+        timeStep = max(tDiff, key=tDiff.count)
+        
 # interpolate timestamps onto default-cadence time-grid
-t_interp = np.linspace(0, timestamp[-1], (timestamp[-1]//time_step)+1)  
-    
+t_interp = np.linspace(0, timestamp[-1], (timestamp[-1]//timeStep)+1)  
+ 
+# determine frequency values that FFT will evaluate   
 n = len(t_interp)
 rem = n % n_segments
 freq_size = (n - rem) // n_segments
 
-sample_freq = fftpack.fftfreq(freq_size, d=time_step)
+sample_freq = fftpack.fftfreq(freq_size, d=timeStep)
 pidxs = np.where(sample_freq > 0)
 freqs = sample_freq[pidxs]
 
@@ -214,6 +226,7 @@ if rank == 0:
     print("Saving files...", flush=True)
     np.save('%s/specCube.npy' % directory, spectra_array)
     np.save('%s/specUnc.npy' % directory, spectra_StdDev)
+    np.save('%s/frequencies.npy' % directory, freqs)
     
     tEnd0 = datetime.datetime.fromtimestamp(time.time())
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
