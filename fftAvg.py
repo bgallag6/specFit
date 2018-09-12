@@ -124,7 +124,7 @@ mmap_datacube = cfg['mmap_datacube']
 n_segments = cfg['num_segments']  # break data into # segments of equal length
 tStep = cfg["time_step"]
 
-if mmap_datacube == 'y':
+if mmap_datacube == True:
     cube = np.load('%s/dataCube.npy' % directory, mmap_mode='r')
 else: 
     cube = np.load('%s/dataCube.npy' % directory)

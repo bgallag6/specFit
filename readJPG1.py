@@ -98,10 +98,6 @@ with open('specFit_config.yaml', 'r') as stream:
 
 imDir = cfg['jpg_dir']
 datDir = cfg['processed_dir']
-sub_reg_coords = cfg['sub_reg_coords']
-
-# set variables from command line
-x1,x2,y1,y2 = sub_reg_coords
 
 # create a list of all the fits files. This is USER-DEFINED
 flist = sorted(glob.glob('%s/*.jpg' % imDir))

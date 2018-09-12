@@ -8,14 +8,14 @@ echo "The process of this program:
 
 read -p "Enter the number of processors [ex. 16]: " num
 
-:: mpiexec -n $num python preProcessFITS1.py
+mpiexec -n $num python preProcessFITS1.py
 
-:: python preProcessFITS2.py $num
+python preProcessFITS2.py $num
 
-:: mpiexec -n $num python fftAvg.py
+mpiexec -n $num python fftAvg.py
 
 mpiexec -n $num python specFit.py
 
-:: python paramPlot.py
+python paramPlot.py
 
-:: python specVis.py
+python specVis.py

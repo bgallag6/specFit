@@ -192,7 +192,7 @@ spec_unc = cfg['spec_unc']
 M1_guess = cfg['M1_guess']
 M2_guess = cfg['M2_guess']
 
-if mmap_spectra == 'y':
+if mmap_spectra == True:
     # load memory-mapped array as read-only
     cube = np.load('%s/specCube.npy' % directory, mmap_mode='r')
     cube_StdDev = np.load('%s/specUnc.npy' % directory, mmap_mode='r')

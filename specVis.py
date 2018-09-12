@@ -364,7 +364,7 @@ directory = cfg['specVis_dir']
 
 global spectra
 
-if mmap_spectra == 'y':
+if mmap_spectra == True:
     # load memory-mapped array as read-only
     spectra = np.load('%s/specCube.npy' % directory, mmap_mode='r')
     stdDev = np.load('%s/specUnc.npy' % directory, mmap_mode='r')
