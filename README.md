@@ -50,5 +50,11 @@ specVis_dir: "./test/validation/Processed/20120606/1600"
 
 To verify the proper functioning of the library, demo FITS and jpg images which can be processed are included in the repository under the directory `test/Images/20120606/1600`.  The script used to convert the FITS images to jpg, `fits2jpg.py`, can be found in the same location.
 
+To process the jpg images, the main program is run using the command:
+
+    $ bash mainJPG.sh
+
+This replaces the `preProcessFITS1/2.py` scripts with the `readJPG1/2` scripts.
+
 ## License
 UNLICENSED
