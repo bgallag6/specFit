@@ -27,11 +27,10 @@ def fits2jpg(filename):
     exposure = (fmap.exposure_time).value
     print(Time(fmap.date).jd, exposure)
     exif_ifd = {piexif.ExifIFD.DateTimeOriginal: u"%s" % timestamp,
-            piexif.ExifIFD.ExposureTime: tuple((int(exposure*10000), int(10000)))}
-    #exif_dict = {"Exif":exif_ifd}
+            piexif.ExifIFD.ExposureTime: tuple((int(exposure*1e4), int(1e4)))}
     exif_bytes = piexif.dump({"Exif":exif_ifd})
     fnTrim = '%s_%s_%s' % (filename[54:58], filename[45:53], filename[85:-20])
-    jmap.save('C:/Users/Brendan/Desktop/demojpeg/%s.jpg' % fnTrim, exif=exif_bytes)
+    jmap.save('./jpg2/%s.jpg' % fnTrim, exif=exif_bytes)
 
 ## load jpg images, convert to grayscale "matching" original FITS image   
 def convertGrayscale(filename):
@@ -55,7 +54,7 @@ def readExif(filename):
 
 fmt = "%Y:%m:%d %H:%M:%S"
 
-flist = sorted(glob.glob('C:/Users/Brendan/Desktop/specFit/test/Images/20120606/1600/aia*.fits'))
+flist = sorted(glob.glob('./fits2/aia*.fits'))
 
 #for fname in flist:
 #    fits2jpg(fname)
