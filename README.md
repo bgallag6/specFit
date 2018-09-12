@@ -50,32 +50,5 @@ specVis_dir: "./test/validation/Processed/20120606/1600"
 
 To verify the proper functioning of the library, demo FITS and jpg images which can be processed are included in the repository under the directory `test/Images/20120606/1600`.  The script used to convert the FITS images to jpg, `fits2jpg.py`, can be found in the same location.
 
-```
-├── test
-    ├── Images
-    |   └── 20120606
-    |       └── 1600
-    |           ├── fits
-    |           |   └──all_fits_images.fits
-    |           └── jpg
-    |               └── all_jpg_images.jpg
-    ├── Processed
-    |   └── 20120606
-    |       └── 1600
-    |           └── place_holder
-    └── validation
-        └── Processed
-            └── 20120606
-                └── 1600
-                    ├── timestamps.npy
-                    ├── exposures.npy
-                    ├── dataCube.npy
-                    ├── frequencies.npy
-                    ├── specCube.npy
-                    ├── specUnc.npy
-                    ├── visual.npy
-                    └── param.npy
-```
-
 ## License
 UNLICENSED
