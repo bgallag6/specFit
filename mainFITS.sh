@@ -6,7 +6,13 @@ echo "The process of this program:
 3) Power-spectra are computed from extracted timeseries using the Fast Fourier Transform
 4) Models are fit to the spectra and their parameters extracted"
 
-read -p "Enter the number of processors [ex. 16]: " num
+while getopts ":n:" opt; do
+  case $opt in
+    n) num=$OPTARG;;
+    \?) echo "Invalid option: -$OPTARG" >&2; exit 1;;
+    :) echo "Option -$OPTARG requires an argument." >&2; exit 1;;
+  esac
+done
 
 mpiexec -n $num python preProcessFITS1.py
 
