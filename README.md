@@ -10,9 +10,9 @@ Use of this library for purposes other than solar research may require simple mo
 
 Other data types should adapt well to this software, though adjustments may be necessary depending on the user's purpose. Fundamentally, all uses of this library will require some kind of two-dimensional observation/image sequence as an input, along with their temporal (date/time) information. For those using non-FITS images, appropriate pre-processing of the observations is the responsibility of the user, and the software will assume at all times that observations are (e.g.) spatially co-aligned. 
 
-## Install and Test
+## 1. Install and Test
 
-### Dependencies
+### 1.1 Dependencies
 
 The dependencies of this library are the Python packages (minimum version tested): [`astropy`](https://github.com/astropy/astropy)`(2.0.3)`, [`matplotlib`](https://github.com/matplotlib/matplotlib)`(1.5.1)`, [`mpi4py`](https://github.com/mpi4py/mpi4py)`(2.0.0)`, [`numpy`](https://github.com/numpy/numpy)`(1.11.2)`, [`scipy`](https://github.com/scipy/scipy)`(0.18.1)`, [`sunpy`](https://github.com/sunpy/sunpy)`(0.8.4)`, and [`PyYAML`](https://github.com/yaml/pyyaml)`(0.1.7)`.
 
@@ -30,7 +30,7 @@ cd specFit; bash mainFITS.sh
 cd specFit; bash mainJPG.sh
 ```
 
-## Usage
+## 1.2 Usage
 
 To execute the main program, in the top-level directory run the command:
 
@@ -47,7 +47,7 @@ By default, the program is run without MPI. If the number of processors `N` is g
 5. `paramPlot.py`
 6. `specVis.py`
 
-### specVis
+## 2. specVis
 
 To explore the `specVis` utility without having to first execute the main program, the user can edit the `specFit_config.yaml` file to read:
 ```
@@ -59,5 +59,6 @@ specVis_dir: "./test/validation/Processed/20120606/1600"
 python specVis.py
 ```
 
-## License
-UNLICENSED
+## 3. Contact
+
+Brendan Gallagher <bgallag6@masonlive.gmu.edu>
