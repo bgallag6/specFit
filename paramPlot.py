@@ -41,7 +41,9 @@ h_map = np.load('%s/param.npy' % directory)
 
 # generate p-value heatmap + masked Lorentzian component heatmaps
 dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
-p_val = ff.sf(h_map[6], dof1, dof2)
+fstat = np.copy(h_map[6])
+fstat[np.where(np.isnan(fstat))] = 1.
+p_val = ff.sf(fstat, dof1, dof2)
 
 mask_thresh = 0.005  # significance threshold
    

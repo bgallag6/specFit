@@ -55,16 +55,25 @@ def datacube(flist_chunk):
     T1 = 0
     
     count = 0
+    dimCount = 0
+    
+    print(mapShape, flush=True)
+    print(diffLatPix, flush=True)
+    print(xminI, xminF)
 
     # loop through datacube and extract timeseries, timestamps, exposures
     for filename in flist_chunk:
         smap = Map(filename).submap(c3, c4)
         exposure[count] = (smap.exposure_time).value
         timestamp[count] = Time(smap.date).jd
-        dmap = diffrot_map(smap, time=dt0)
-        visAvg += (dmap.data / (smap.exposure_time).value)
-        dCube[count] = dmap.data
-        count += 1        
+        dmap = diffrot_map(smap, time=dt0).data
+        if dmap.shape != mapShape:
+            dimenDiff = np.array(dmap.shape) - np.array(mapShape)
+            dmap = dmap[:dmap.shape[0]-dimenDiff[0], :dmap.shape[1]-dimenDiff[1]]
+            dimCount += 1
+        visAvg += (dmap / (smap.exposure_time).value)
+        dCube[count] = dmap
+        count += 1       
         
         # estimate time remaining and print to screen
         T = timer()
@@ -88,6 +97,8 @@ def datacube(flist_chunk):
     visAvg = visAvg[diffLatPix:-diffLatPix, xminI:-xminF]
 
     np.save('%s/chunk_%i_of_%i' % (datDir, rank+1, size), dCube_trim)
+    
+    print('Processor: %i, Dimension Errors: %i' % (rank+1, dimCount), flush=True)
     
     #return dCube_trim
     return exposure, timestamp, visAvg
@@ -215,7 +226,7 @@ if rank == 0:
     T_min_final, T_sec_final = divmod(T_final, 60)
     T_hr_final, T_min_final = divmod(T_min_final, 60)
     print("Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)   
-    print("Just finished region: %s %iA" % (date, wavelength), flush=True)
+    #print("Just finished region: %s %iA" % (date, wavelength), flush=True)
   
     tEnd0 = datetime.datetime.fromtimestamp(time.time())
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
@@ -225,8 +236,8 @@ if rank == 0:
     with open('log.txt', 'a+') as file:
         file.write("Region Details" + "\n")
         file.write("==============" + "\n\n")
-        file.write("Date: %s" % date + "\n")
-        file.write("Wavelength: %i" % wavelength + "\n\n")
+        #file.write("Date: %s" % date + "\n")
+        #file.write("Wavelength: %i" % wavelength + "\n\n")
         file.write("%s: Extract Data & Derotate" % scriptName + "\n")
         file.write("----------------------------------------" + "\n")
         file.write("FITS directory: %s" % imDir + "\n")

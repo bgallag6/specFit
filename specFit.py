@@ -102,7 +102,10 @@ def specFit( subcube, subcube_StdDev ):
         
         if chisqrM1 > chisqrM22:
             rval = pearsonr(m2_fit2, s)[0]
-            rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
+            if C22 <= 0.:
+                rollover = np.nan
+            else:
+                rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
             
             # populate array with M2 parameters
             params[0][l][m] = A22
@@ -116,9 +119,13 @@ def specFit( subcube, subcube_StdDev ):
             params[8][l][m] = rval
             params[9][l][m] = rollover
             params[10][l][m] = redchisqrM22
+            
         else:
             rval = pearsonr(m1_fit, s)[0]
-            rollover = (1. / ((C / A)**(-1. / n))) / 60.
+            if C <= 0.:
+                rollover = np.nan
+            else:
+                rollover = (1. / ((C / A)**(-1. / n))) / 60.
             
             # populate array with M1 parameters
             params[0][l][m] = A
