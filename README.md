@@ -2,6 +2,8 @@
 
 > A Python library for fitting spectral models to temporal image sequences and exploring the results 
 
+![Example Image](https://github.com/bgallag6/specFit/exampleImage1.png)
+
 The `specFit` Python library extracts intensity time series from each pixel location in spatially co-aligned temporal sequences of 2-dimensional images, transforms each time series into power spectra via the Fast Fourier Transform, fits a parametric model to the spectra, and extracts and visualizes the best-fit parameter values as heatmaps.  The included Message Passing Interface bindings allow the computationally expensive steps to be parallelized. `specVis.py`, an included GUI-based tool, allows users to explore the spatial dependence of model parameters as heatmaps and browse pixel-level spectra and model fits.
 
 Example parametric spectral models are included in `specModel.py`, and instructions are provided for incorporating user-defined models.  The included YAML configuration file `specFit_config.yaml` is used to pass arguments to each script, including the directory paths for input/output data, the coordinates identifying any subregion of interest (where sub-fielding of large images is required), and flags to enable/disable memory-mapping of generated datacubes.
@@ -30,7 +32,7 @@ cd specFit; bash mainFITS.sh
 cd specFit; bash mainJPG.sh
 ```
 
-## 1.2 Usage
+### 1.2 Usage
 
 To execute the main program, in the top-level directory run the command:
 
