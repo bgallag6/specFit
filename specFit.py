@@ -8,7 +8,8 @@ Created on Wed Apr  4 13:28:45 2018
 """
 ######################
 # run with:
-# $ mpiexec -n # python specFit.py    (# = number of processors)
+# $ python specFit.py
+# $ mpiexec -n N python specFit.py    (N = number of processors)
 ######################
 """
 
