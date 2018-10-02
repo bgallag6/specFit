@@ -14,13 +14,15 @@ while getopts ":n:" opt; do
   esac
 done
 
-mpiexec -n $num python preProcessFITS1.py
+PREFIX="mpiexec -n $num"
+
+$PREFIX python preProcessFITS1.py
 
 python preProcessFITS2.py $num
 
-mpiexec -n $num python fftAvg.py
+$PREFIX python fftAvg.py
 
-mpiexec -n $num python specFit.py
+$PREFIX python specFit.py
 
 python paramPlot.py
 

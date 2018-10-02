@@ -13,21 +13,24 @@ Created on Wed Apr  4 13:28:45 2018
 ######################
 """
 
-
 from timeit import default_timer as timer
 import numpy as np
 from scipy.optimize import curve_fit as Fit
 import scipy.signal
 from scipy import fftpack
-from mpi4py import MPI
 from scipy.stats.stats import pearsonr 
 import yaml
 from specModel import M1, M2         
 import time
 import datetime
-import sys
 import os        
 
+
+havempi = True
+try:
+  from mpi4py import MPI
+except:
+  havempi = False
 
 def specFit( subcube, subcube_StdDev ):
         
@@ -172,14 +175,18 @@ def specFit( subcube, subcube_StdDev ):
 
 ##############################################################################
 ##############################################################################
-  
-comm = MPI.COMM_WORLD  # set up comms
-rank = comm.Get_rank()  # Each processor gets its own "rank"
-	
-start = timer()
 
-# How many processors? (pulls from "-n 4" specified in terminal)
-size = MPI.COMM_WORLD.Get_size()
+if havempi:
+  # Get_size() pulls from "-n N" specified on command line
+  size = MPI.COMM_WORLD.Get_size()
+  comm = MPI.COMM_WORLD  # set up comms
+  rank = comm.Get_rank()  # Each processor gets its own "rank"
+else:
+  size = 1
+  comm = None
+  rank = 0
+
+start = timer()
 
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
@@ -209,7 +216,7 @@ else:
     cube_StdDev = np.load('%s/specUnc.npy' % directory)
 
 # Split the data based on no. of processors
-chunks = np.array_split(cube, size)
+chunks = np.array_split(cube, size) # TODO: Needed if size = 1?
 chunks_StdDev = np.array_split(cube_StdDev, size)
 
 
