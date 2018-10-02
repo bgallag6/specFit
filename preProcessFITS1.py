@@ -23,13 +23,17 @@ from sunpy.coordinates import frames
 from sunpy.physics.solar_rotation import calculate_solar_rotate_shift
 from sunpy.physics.differential_rotation import diffrot_map
 from timeit import default_timer as timer
-from mpi4py import MPI
 import yaml
 import time
 import datetime
 import sys
 import os
 
+havempi = True
+try:
+  from mpi4py import MPI
+except:
+  havempi = False
 
 def datacube(flist_chunk):
     # rebin region to desired fraction 
@@ -107,11 +111,16 @@ def datacube(flist_chunk):
 ##############################################################################
 ##############################################################################
 
-comm = MPI.COMM_WORLD  # set up comms
-rank = comm.Get_rank()  # Each processor gets its own "rank"
+if havempi:
+  # Get_size() pulls from "-n N" specified on command line
+  comm = MPI.COMM_WORLD  # set up comms
+  rank = comm.Get_rank()  # Each processor gets its own "rank"
+  size = comm.Get_size()
+else:
+  comm = None
+  rank = 0
+  size = 1
 
-# How many processors ? (pulls from "-n 4" specified in terminal)
-size = MPI.COMM_WORLD.Get_size()  
 
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
@@ -196,15 +205,20 @@ start = timer()
 
 ex, t, v_avg = datacube( subcube )
 
-# Gather all results
-all_ex = comm.gather(ex, root=0)
-all_t = comm.gather(t, root=0)
-all_v_avg = comm.gather(v_avg, root=0)
+if havempi:
+    # Gather all results
+    all_ex = comm.gather(ex, root=0)
+    all_t = comm.gather(t, root=0)
+    all_v_avg = comm.gather(v_avg, root=0)
 
 # Have one node stack the results
 if rank == 0:
-    ex_arr = np.hstack(all_ex)
-    tArr = np.hstack(all_t)
+    if havempi:
+        ex_arr = np.hstack(all_ex)
+        tArr = np.hstack(all_t)
+    else:
+        ex_arr = all_ex
+        tArr = all_t
   
     tArr -= tArr[0]  # calculate time since first image
     tArr = np.around(tArr*86400)  # get timestamps in seconds

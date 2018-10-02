@@ -23,13 +23,18 @@ import scipy.signal
 from scipy import signal
 import scipy.misc
 from timeit import default_timer as timer
-from mpi4py import MPI
 from scipy import fftpack
 import yaml
 import time
 import datetime
 import sys
 import os
+
+havempi = True
+try:
+  from mpi4py import MPI
+except:
+  havempi = False
 
 def fftAvg(subcube):
     
@@ -102,13 +107,19 @@ def fftAvg(subcube):
 """
 # Setup MPI and load datacube, time, and exposure arrays
 """  
-comm = MPI.COMM_WORLD  # set up comms
-rank = comm.Get_rank()  # Each processor gets its own "rank"
-	
-start = timer()
 
-# How many processors? (pulls from "-n 4" specified in terminal) 
-size = MPI.COMM_WORLD.Get_size()  
+if havempi:
+  # Get_size() pulls from "-n N" specified on command line
+  comm = MPI.COMM_WORLD  # set up comms
+  rank = comm.Get_rank()  # Each processor gets its own "rank"
+  size = comm.Get_size()
+else:
+  comm = None
+  rank = 0
+  size = 1
+	
+  
+start = timer() 
 
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
@@ -183,16 +194,19 @@ print("Processor", rank, "received an array with dimensions", ss, flush=True)
 
 spectra_seg_part = fftAvg(subcube)
 
-spectra_seg = None 
-
-# allocate receive buffer  
-if rank == 0:
-    spectra_seg = np.empty((cube.shape[1]-(trim_top-trim_bot), cube.shape[2], 
-                            len(freqs)), dtype='float64')  
-
-# Gather all the results
-comm.Gather(sendbuf=spectra_seg_part, recvbuf=spectra_seg, root=0)
-
+if havempi:
+    spectra_seg = None 
+    
+    # allocate receive buffer  
+    if rank == 0:
+        spectra_seg = np.empty((cube.shape[1]-(trim_top-trim_bot), cube.shape[2], 
+                                len(freqs)), dtype='float64')  
+    
+    # Gather all the results
+    comm.Gather(sendbuf=spectra_seg_part, recvbuf=spectra_seg, root=0)
+else:
+    spectra_seg = spectra_seg_part
+    
 # Have one node do the last bit
 if rank == 0:
 

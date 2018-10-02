@@ -20,5 +20,5 @@ def M2(f, a, n, c, p, fp, fw):
 
 # define Lorentzian-fitting function
 #@numba.jit
-def Lorentz(f, p, fp, fw):
+def m2(f, p, fp, fw):
     return p*(1./ (1.+((np.log(f)-fp)/fw)**2))

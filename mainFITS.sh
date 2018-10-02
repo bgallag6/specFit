@@ -14,16 +14,31 @@ while getopts ":n:" opt; do
   esac
 done
 
-PREFIX="mpiexec -n $num"
 
-$PREFIX python preProcessFITS1.py
+if [ $num -gt 1 ]; then
+    PREFIX="mpiexec -n $num"
+else
+    PREFIX=
+fi 
 
-python preProcessFITS2.py $num
 
-$PREFIX python fftAvg.py
+pyv="$(python -c 'import sys; print(sys.version_info[0])' 2>&1)"
 
-$PREFIX python specFit.py
 
-python paramPlot.py
+if  [ $pyv -lt 3 ]; then
+    echo "Python version 3 required."
 
-python specVis.py
+else
+    $PREFIX python preProcessFITS1.py
+
+    python preProcessFITS2.py $num
+
+    $PREFIX python fftAvg.py
+
+    $PREFIX python specFit.py
+ 
+    python paramPlot.py
+
+    python specVis.py
+
+fi

@@ -23,7 +23,8 @@ import yaml
 from specModel import M1, M2         
 import time
 import datetime
-import os        
+import os   
+import sys     
 
 
 havempi = True
@@ -178,13 +179,14 @@ def specFit( subcube, subcube_StdDev ):
 
 if havempi:
   # Get_size() pulls from "-n N" specified on command line
-  size = MPI.COMM_WORLD.Get_size()
   comm = MPI.COMM_WORLD  # set up comms
   rank = comm.Get_rank()  # Each processor gets its own "rank"
+  size = comm.Get_size()
 else:
-  size = 1
   comm = None
   rank = 0
+  size = 1
+  
 
 start = timer()
 
@@ -258,12 +260,16 @@ print("Processor", rank, "received an array with dimensions", ss, flush=True)
 
 params_T = specFit( subcube, subcube_StdDev )
 
-# Gather all the results
-newData_p = comm.gather(params_T, root=0)
+if havempi:
+    # Gather all the results
+    newData_p = comm.gather(params_T, root=0)
 
 # Have one node stack the results
 if rank == 0:
-    stack_p = np.hstack(newData_p)
+    if havempi:
+        stack_p = np.hstack(newData_p)
+    else:
+        stack_p = params_T
     print(stack_p.shape, flush=True)  # Verify dimensions match input cube
  
     T_final = timer() - start

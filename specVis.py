@@ -19,7 +19,7 @@ from scipy.stats import f as ff
 from scipy.stats.stats import pearsonr
 import os
 import yaml
-from specModel import M1, M2, Lorentz
+from specModel import M1, M2, m2
 
     
 def find_nearest(array,value):
@@ -275,7 +275,7 @@ def onclick(event):
                        
         # create models from parameters    
         m1_fit = M1(freqs, A, n, C)    
-        lorentz = Lorentz(freqs,P22,fp22,fw22)
+        lorentz = m2(freqs,P22,fp22,fw22)
         m2_fit2 = M2(freqs, A22,n22,C22,P22,fp22,fw22) 
         m1_fit2 = M1(freqs, A22,n22,C22)      
         
