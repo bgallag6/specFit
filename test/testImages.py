@@ -16,27 +16,30 @@ for i in range(0,N):
     arr = imarray
     t = float(i)
     tmp = np.sin(4.*2*np.pi*t/T)+np.sin(5.*2*np.pi*t/T)+np.sin(6.*2*np.pi*t/T)
-    arr[0,0] = np.uint8( 255.0*(tmp/3.+1.)/2. )
+    for m in range(3):
+        for n in range(3):
+            arr[m,n] = np.uint8( 255.0*(tmp/3.+1.)/2. )
     im = Image.fromarray(arr)
     im.save(os.path.join(dataDir,'testImages-%03d.tiff' % i))
 
 ###########################################################################
 # Read images
-cube = np.zeros((3,3,N), dtype=np.uint8)
+cube = np.zeros((N,3,3), dtype=np.uint8)
 
 timestamps = []
 exposures = []
 for i in range(0,N):
     # Normally we would read timestamp from Exif metadata in file
-    timestamp = datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
-    timestamps.append(timestamp)
+    #timestamp = datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
+    #timestamps.append(timestamp)
+    timestamps.append(i)
     
     exposures.append(1.0)
 
     im = Image.open(os.path.join(dataDir,'testImages-%03d.tiff' % i))
-    cube[:,:,i] = np.asarray(im)
+    cube[i,:,:] = np.asarray(im)
 
-cube_avg = np.uint8(np.average(cube,axis=2))
+cube_avg = np.uint8(np.average(cube,axis=0))
 
 ###########################################################################
 # Save info for specFit processing
