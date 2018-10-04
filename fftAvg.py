@@ -19,9 +19,6 @@ Created on Tue Apr 10 09:49:17 2018
 """
 
 import numpy as np
-import scipy.signal
-from scipy import signal
-import scipy.misc
 from timeit import default_timer as timer
 from scipy import fftpack
 import yaml

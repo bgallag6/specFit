@@ -16,8 +16,6 @@ Created on Wed Apr  4 13:28:45 2018
 from timeit import default_timer as timer
 import numpy as np
 from scipy.optimize import curve_fit as Fit
-import scipy.signal
-from scipy import fftpack
 from scipy.stats.stats import pearsonr 
 import yaml
 from specModel import M1, M2         
@@ -218,25 +216,10 @@ else:
     cube_StdDev = np.load('%s/specUnc.npy' % directory)
 
 # Split the data based on no. of processors
-chunks = np.array_split(cube, size) # TODO: Needed if size = 1?
+chunks = np.array_split(cube, size)
 chunks_StdDev = np.array_split(cube_StdDev, size)
 
-
-### determine frequency values that FFT will evaluate
-## use frequencies array if exists
-if os.path.isfile('%s/frequencies.npy' % directory):
-    freqs = np.load('%s/frequencies.npy' % directory)
-else:
-    if wavelength in [1600, 1700]:
-        time_step = 24
-    else:
-        time_step = 12
-    
-    freq_size = (cube.shape[2]*2)+1
-    sample_freq = fftpack.fftfreq(freq_size, d=time_step)
-    pidxs = np.where(sample_freq > 0)    
-    freqs = sample_freq[pidxs]
-    
+freqs = np.load('%s/frequencies.npy' % directory)
 
 # assign equal weights to all parts of curve & use as fitting uncertainties
 df = np.log10(freqs[1:len(freqs)]) - np.log10(freqs[0:len(freqs)-1])

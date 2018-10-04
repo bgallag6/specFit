@@ -60,10 +60,6 @@ def datacube(flist_chunk):
     
     count = 0
     dimCount = 0
-    
-    print(mapShape, flush=True)
-    print(diffLatPix, flush=True)
-    print(xminI, xminF)
 
     # loop through datacube and extract timeseries, timestamps, exposures
     for filename in flist_chunk:
