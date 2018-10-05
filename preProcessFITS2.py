@@ -9,10 +9,11 @@ import numpy as np
 import sys
 import yaml
 import os
+import glob
 
 import argparse
 parser = argparse.ArgumentParser(description='preProcessFITS2.py')
-parser.add_argument('--raw_dir', type=str)
+parser.add_argument('--processed_dir', type=str)
 args = parser.parse_args()
 processed_dir = args.processed_dir
 

@@ -36,15 +36,15 @@ try:
 except:
   havempi = False
 
-## import program configurations from file
-with open('specFit_config.yaml', 'r') as stream:
-    cfg = yaml.load(stream)
-sub_reg_coords = cfg['sub_reg_coords']
+# TODO: Take as command line argument
+sub_reg_coords = [155,270,200,290]
 
 import argparse
 parser = argparse.ArgumentParser(description='preProcessFITS1.py')
 parser.add_argument('--processed_dir', type=str)
 parser.add_argument('--raw_dir', type=str)
+parser.add_argument('--Nfiles', type=str, default="all")
+
 args = parser.parse_args()
 
 raw_dir = args.raw_dir
@@ -140,7 +140,9 @@ x1,x2,y1,y2 = sub_reg_coords
 
 # create a list of all the fits files
 flist = sorted(glob.glob('%s/aia*.fits' % raw_dir))
-flist = flist[0:100]
+
+if Nfiles != "all":
+    flist = flist[0:int(Nfiles)]
 
 nf = len(flist)
 

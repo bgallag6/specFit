@@ -226,7 +226,7 @@ else:
 chunks = np.array_split(cube, size)
 chunks_StdDev = np.array_split(cube_StdDev, size)
 
-freqs = np.load('%s/frequencies.npy' % directory)
+freqs = np.load('%s/frequencies.npy' % processed_dir)
 
 # assign equal weights to all parts of curve & use as fitting uncertainties
 df = np.log10(freqs[1:len(freqs)]) - np.log10(freqs[0:len(freqs)-1])
