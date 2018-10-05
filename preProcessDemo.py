@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 """
 Usage:
-  python preProcessTIFF.py --processed_dir DIR --raw_dir DIR
+  python preProcessDemo.py --processed_dir DIR --raw_dir DIR
 """
 import sys
 import os
 from PIL import Image
 import numpy as np
 
-N = 256 # Number of images
+N = 256 # Number of images to create
+prefix = 'preProcessDemo' # Image file name prefix.
+Nx = 5 # Number of pixels in x 
+Ny = 5 # Number of pixels in y
 
 import argparse
-parser = argparse.ArgumentParser(description='preProcessTIFF.py')
+parser = argparse.ArgumentParser(description='preProcessDemo.py')
 parser.add_argument('--processed_dir', type=str)
 parser.add_argument('--raw_dir', type=str)
 args = parser.parse_args()
@@ -20,9 +23,6 @@ processed_dir = args.processed_dir
 
 if not os.path.exists(raw_dir): os.makedirs(raw_dir)
 if not os.path.exists(processed_dir): os.makedirs(processed_dir)
-
-Nx = 5
-Ny = 5
 
 ###########################################################################
 # Create images
@@ -34,7 +34,7 @@ for i in range(0,N):
     tmp = np.sin(4.*2*np.pi*t/T)+np.sin(5.*2*np.pi*t/T)+np.sin(6.*2*np.pi*t/T)
     arr[:,:] = np.uint8( 255.0*(tmp/3.+1.)/2. )
     im = Image.fromarray(arr)
-    im.save(os.path.join(raw_dir,'testImages-%03d.tiff' % i))
+    im.save(os.path.join(raw_dir,prefix+'-%03d.tiff' % i))
 
 ###########################################################################
 # Read images
@@ -49,7 +49,7 @@ for i in range(0,N):
     
     exposures.append(1.0)
 
-    im = Image.open(os.path.join(raw_dir,'testImages-%03d.tiff' % i))
+    im = Image.open(os.path.join(raw_dir,prefix+'-%03d.tiff' % i))
     cube[i,:,:] = np.asarray(im)
 
 cube_avg = np.uint8(np.average(cube,axis=0))
@@ -61,4 +61,4 @@ np.save(os.path.join(processed_dir,'visual.npy'), cube_avg)
 np.save(os.path.join(processed_dir,'timestamps.npy'), timestamps)
 np.save(os.path.join(processed_dir,'exposures.npy'),exposures)
 
-print('Wrote %d images to %s. Write npy files to %s.' % (N,raw_dir,processed_dir))
+print('Wrote %d images to %s. Wrote npy files to %s.' % (N,raw_dir,processed_dir))
