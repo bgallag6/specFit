@@ -3,13 +3,12 @@
 Created on Tue Apr 10 09:49:17 2018
 
 @author: Brendan
-"""
 
-"""
-######################
-# run with:
-# $ mpiexec -n # python fftAvg.py    (# = number of processors)
-######################
+Usage:
+  python fftAvg.py --processed_dir DIR [--time_step 1] [--mmap_datacube True] [--num_segments 2]
+To use mpi, use
+  mpiexec -n N python fftAvg.py ...
+where N = number of processors
 """
 
 """
@@ -19,9 +18,6 @@ Created on Tue Apr 10 09:49:17 2018
 """
 
 import numpy as np
-import scipy.signal
-from scipy import signal
-import scipy.misc
 from timeit import default_timer as timer
 from scipy import fftpack
 import yaml
@@ -36,6 +32,30 @@ try:
 except:
   havempi = False
 
+def cfg():
+
+    import argparse
+    parser = argparse.ArgumentParser(description='fftAvg.py')
+    parser.add_argument('--processed_dir', type=str)
+    parser.add_argument('--num_segments', type=int, default=2)
+    parser.add_argument('--time_step', type=str, default='mode')
+    parser.add_argument('--mmap_datacube', type=bool, default=True)
+    args = parser.parse_args()
+    
+    processed_dir = args.processed_dir
+    num_segments = args.num_segments
+    mmap_datacube = args.mmap_datacube
+    tStep = args.time_step
+    if tStep != "mode" and tStep != "min":
+        try:
+            tStep = float(tStep)
+        except:
+            raise ValueError("time_step must be a float or 'min' or 'mode'")
+    
+    print('Using: processed_dir = %s, num_segments = %s, time_step = %s, mmap_datacube = %s' % (processed_dir, num_segments, str(tStep), str(mmap_datacube)))
+
+    return processed_dir, num_segments, tStep, mmap_datacube
+    
 def fftAvg(subcube):
     
     #from scipy import fftpack
@@ -57,12 +77,12 @@ def fftAvg(subcube):
             
             avg_array = np.zeros((len(freqs)))
             
-            # trim timeseries to be integer multiple of n_segments
+            # trim timeseries to be integer multiple of num_segments
             v_interp = v_interp[0:len(v_interp)-rem]  
-            split = np.split(v_interp, n_segments)
+            split = np.split(v_interp, num_segments)
             
             # perform Fast Fourier Transform on each segment
-            for i in range(n_segments):     
+            for i in range(num_segments):     
                 
               sig = split[i]
               sig_fft = fftpack.fft(sig)
@@ -71,7 +91,7 @@ def fftAvg(subcube):
               powers = ((powers/len(sig))**2)*(1./(sig.std()**2))*2  # normalize
               avg_array += powers
             
-            avg_array /= n_segments  # average fourier power of the segments
+            avg_array /= num_segments  # average fourier power of the segments
                        
             spectra_seg[ii][jj] = np.transpose(avg_array) 
         
@@ -117,31 +137,22 @@ else:
   comm = None
   rank = 0
   size = 1
-	
-  
+
+(processed_dir, num_segments, tStep, mmap_datacube) = cfg()
+
 start = timer() 
 
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
 
-with open('specFit_config.yaml', 'r') as stream:
-    cfg = yaml.load(stream)
-
-directory = cfg['processed_dir']
-date = cfg['date']
-wavelength = cfg['wavelength']
-mmap_datacube = cfg['mmap_datacube']
-n_segments = cfg['num_segments']  # break data into # segments of equal length
-tStep = cfg["time_step"]
-
 if mmap_datacube == True:
-    cube = np.load('%s/dataCube.npy' % directory, mmap_mode='r')
+    cube = np.load('%s/dataCube.npy' % processed_dir, mmap_mode='r')
 else: 
-    cube = np.load('%s/dataCube.npy' % directory)
+    cube = np.load('%s/dataCube.npy' % processed_dir)
 
-timestamp = np.load('%s/timestamps.npy' % directory)
-exposure = np.load('%s/exposures.npy' % directory)
+timestamp = np.load('%s/timestamps.npy' % processed_dir)
+exposure = np.load('%s/exposures.npy' % processed_dir)
 
 ## trim top/bottom rows of cube so it divides cleanly by the # of processors
 trim_top = int(np.floor((cube.shape[1] % size) / 2))
@@ -157,13 +168,6 @@ for i in range(size):
     if rank == i:
         subcube = chunks[i]
 
-"""
-if wavelength in [1600,1700]:
-    time_step = 24
-else:
-    time_step = 12
-"""
-
 if type(tStep) == float:
     timeStep = tStep
 elif type(tStep) == str:
@@ -178,13 +182,12 @@ t_interp = np.linspace(0, timestamp[-1], (timestamp[-1]//timeStep)+1)
  
 # determine frequency values that FFT will evaluate   
 n = len(t_interp)
-rem = n % n_segments
-freq_size = (n - rem) // n_segments
+rem = n % num_segments
+freq_size = (n - rem) // num_segments
 
 sample_freq = fftpack.fftfreq(freq_size, d=timeStep)
 pidxs = np.where(sample_freq > 0)
 freqs = sample_freq[pidxs]
-
 
 ## Each processor runs function on subcube, results are gathered when finished
 
@@ -237,19 +240,18 @@ if rank == 0:
     T_hr_final, T_min_final = divmod(T_min_final, 60)
     print("Total program time = %i sec" % T_final, flush=True)
     
-    print("Saving files...", flush=True)
-    np.save('%s/specCube.npy' % directory, spectra_array)
-    np.save('%s/specUnc.npy' % directory, spectra_StdDev)
-    np.save('%s/frequencies.npy' % directory, freqs)
+    print("Saving files to %s" % processed_dir, flush=True)
+    np.save('%s/specCube.npy' % processed_dir, spectra_array)
+    np.save('%s/specUnc.npy' % processed_dir, spectra_StdDev)
+    np.save('%s/frequencies.npy' % processed_dir, freqs)
     
     tEnd0 = datetime.datetime.fromtimestamp(time.time())
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
     scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
     
-    #with open('%s_%i_region_details.txt' % (date, wavelength), 'w') as file:
     with open('log.txt', 'a+') as file:
         file.write("%s: FFT & 3x3 Averaging" % scriptName + "\n")
         file.write("----------------------------" + "\n")
-        file.write("Number of time segments: %i" % n_segments + "\n")
+        file.write("Number of time segments: %i" % num_segments + "\n")
         file.write("Program start time: %s" % tStart + "\n")
         file.write("Program end time: %s" % tEnd + "\n\n")
