@@ -8,7 +8,8 @@ Created on Fri Apr  6 15:54:30 2018
 """
 ######################
 # run with:
-# $ mpiexec -n # python diff_derot_mpi.py    (# = number of processors)
+# $ mpiexec -n N python processFITS1.py --processed_dir DIR --raw_dir DIR
+# N = = number of processors
 ######################
 """
 
@@ -34,6 +35,22 @@ try:
   from mpi4py import MPI
 except:
   havempi = False
+
+## import program configurations from file
+with open('specFit_config.yaml', 'r') as stream:
+    cfg = yaml.load(stream)
+sub_reg_coords = cfg['sub_reg_coords']
+
+import argparse
+parser = argparse.ArgumentParser(description='preProcessFITS1.py')
+parser.add_argument('--processed_dir', type=str)
+parser.add_argument('--raw_dir', type=str)
+args = parser.parse_args()
+
+raw_dir = args.raw_dir
+processed_dir = args.processed_dir
+if not os.path.exists(raw_dir): os.makedirs(raw_dir)
+if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 def datacube(flist_chunk):
     # rebin region to desired fraction 
@@ -100,20 +117,17 @@ def datacube(flist_chunk):
     dCube_trim = dCube[:, diffLatPix:-diffLatPix, xminI:-xminF]
     visAvg = visAvg[diffLatPix:-diffLatPix, xminI:-xminF]
 
-    np.save('%s/chunk_%i_of_%i' % (datDir, rank+1, size), dCube_trim)
+    np.save('%s/chunk_%i_of_%i' % (processed_dir, rank+1, size), dCube_trim)
     
     print('Processor: %i, Dimension Errors: %i' % (rank+1, dimCount), flush=True)
     
     #return dCube_trim
     return exposure, timestamp, visAvg
-  
 
 ##############################################################################
-##############################################################################
-
 if havempi:
   # Get_size() pulls from "-n N" specified on command line
-  comm = MPI.COMM_WORLD  # set up comms
+  comm = MPI.COMM_WORLD   # Set up comms
   rank = comm.Get_rank()  # Each processor gets its own "rank"
   size = comm.Get_size()
 else:
@@ -121,26 +135,17 @@ else:
   rank = 0
   size = 1
 
-
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
 
-## import program configurations from file
-with open('specFit_config.yaml', 'r') as stream:
-    cfg = yaml.load(stream)
-
-imDir = cfg['fits_dir']
-datDir = cfg['processed_dir']
-date = cfg['date']
-wavelength = cfg['wavelength']
-sub_reg_coords = cfg['sub_reg_coords']
-
-# set variables from command line
+# set variable from config file
 x1,x2,y1,y2 = sub_reg_coords
 
 # create a list of all the fits files
-flist = sorted(glob.glob('%s/aia*.fits' % imDir))
+flist = sorted(glob.glob('%s/aia*.fits' % raw_dir))
+flist = flist[0:100]
+
 nf = len(flist)
 
 # Select the middle image, to derotate around
@@ -232,9 +237,9 @@ if rank == 0:
     vAvgArr /= nf
   
     print("Saving files...", flush=True)
-    np.save('%s/exposures.npy' % datDir, ex_arr)
-    np.save('%s/timestamps.npy' % datDir, tArr)
-    np.save('%s/visual.npy' % datDir, vAvgArr)
+    np.save('%s/exposures.npy' % processed_dir, ex_arr)
+    np.save('%s/timestamps.npy' % processed_dir, tArr)
+    np.save('%s/visual.npy' % processed_dir, vAvgArr)
   
     T_final = timer() - start
     T_min_final, T_sec_final = divmod(T_final, 60)
@@ -254,8 +259,8 @@ if rank == 0:
         #file.write("Wavelength: %i" % wavelength + "\n\n")
         file.write("%s: Extract Data & Derotate" % scriptName + "\n")
         file.write("----------------------------------------" + "\n")
-        file.write("FITS directory: %s" % imDir + "\n")
-        file.write("Processed directory: %s" % datDir + "\n")
+        file.write("FITS directory: %s" % raw_dir + "\n")
+        file.write("Processed directory: %s" % processed_dir + "\n")
         file.write("Sub-region coordinates: (%i, %i)x, (%i, %i)y" % tuple(sub_reg_coords) + "\n")
         file.write("First image timestamp: %s" % mapI.date.strftime('%Y-%m-%d %H:%M:%S') + "\n")
         file.write("Last image timestamp: %s" % mapF.date.strftime('%Y-%m-%d %H:%M:%S') + "\n")
