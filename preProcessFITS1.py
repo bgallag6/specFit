@@ -77,10 +77,6 @@ def datacube(flist_chunk):
     
     count = 0
     dimCount = 0
-    
-    print(mapShape, flush=True)
-    print(diffLatPix, flush=True)
-    print(xminI, xminF)
 
     # loop through datacube and extract timeseries, timestamps, exposures
     for filename in flist_chunk:
@@ -222,8 +218,9 @@ if rank == 0:
         ex_arr = np.hstack(all_ex)
         tArr = np.hstack(all_t)
     else:
-        ex_arr = all_ex
-        tArr = all_t
+        ex_arr = ex
+        tArr = t
+        all_v_avg = [v_avg]
   
     tArr -= tArr[0]  # calculate time since first image
     tArr = np.around(tArr*86400)  # get timestamps in seconds

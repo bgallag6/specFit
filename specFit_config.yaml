@@ -1,16 +1,21 @@
-fits_dir: "./test/Images/20120606/1600/fits"
-jpg_dir: "./test/Images/20120606/1600/jpg"
-date: "20120606"
-wavelength: 1600
-sub_reg_coords: [155,270,200,290]
-bin_frac: 1
+##################################################################
+# fftAvg.py parameters
+# Over-ridden by command line arguments if given.
 
-processed_dir: "./test/Processed/20120606/1600"
+# Read dataCube.npy as mmapped file instead of into memory.
 mmap_datacube: True
 
+# Split each pixel time series into num_segments,
+# compute spectra, and average num_segments spectra
 num_segments: 2
-time_step: mode
 
+# Time step for interpolation of images.
+# Can be a floating point number, "min", or "mode"
+time_step: mode
+##################################################################
+
+##################################################################
+# specFit.py parameters
 mmap_spectra: True
 spec_unc: "adhoc"
 M1_low: [-0.002, 0.3, -0.01]
@@ -19,8 +24,13 @@ M2_low: [0., 0.3, -0.01, 0.00001, -6.5, 0.05]
 M2_high: [0.002, 6., 0.01, 0.2, -4.6, 0.8]
 M1_guess:
 M2_guess:
+##################################################################
+
+wavelength: 1600
+sub_reg_coords: [155,270,200,290]
+bin_frac: 1
 
 save_fig: False
 
-specVis_dir: "./test/Processed/20120606/1600"
+specVis_dir: "./test/Processed/tiff"
 

@@ -3,8 +3,9 @@
 Created on Tue Dec 20 22:30:43 2016
 @author: Brendan Gallagher
 
+Usage:
+  python paramPlot.py --processed_dir DIR [--save_fig [True]|False] 
 """
-
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,13 +20,18 @@ import os
 plt.rcParams["font.family"] = "Times New Roman"
 font_size = 27
 
-with open('specFit_config.yaml', 'r') as stream:
-    cfg = yaml.load(stream)
+import argparse
+parser = argparse.ArgumentParser(description='paramPlot.py')
+parser.add_argument('--processed_dir', type=str)
+parser.add_argument('--save_fig', type=str, default=True)
+args = parser.parse_args()
 
-directory = cfg['processed_dir']
-date = cfg['date']
-wavelength = cfg['wavelength']
-savefig = cfg['save_fig']
+processed_dir = args.processed_dir
+save_fig = args.save_fig
+fig_dir = os.path.join(processed_dir,'figures')
+
+if save_fig:
+    if not os.path.exists(fig_dir): os.makedirs(fig_dir)
 
 # 11-param-list
 titles = [r'Power Law Slope-Coefficient [flux] - A', r'Power Law Index n', 
@@ -37,7 +43,7 @@ names = ['slope_coeff', 'index', 'tail', 'lorentz_amp', 'lorentz_loc',
          'lorentz_wid', 'f_test', 'lorentz_amp_scaled', 'r_value', 'roll_freq', 'chisqr']
 
 # load parameter/heatmap array 
-h_map = np.load('%s/param.npy' % directory)  
+h_map = np.load('%s/param.npy' % processed_dir)  
 
 # generate p-value heatmap + masked Lorentzian component heatmaps
 dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
@@ -116,8 +122,8 @@ for i in range(h_map.shape[0]):
     cbar.ax.tick_params(labelsize=font_size, pad=5) 
     cbar.set_ticks(c_ticks)
     
-    if savefig == True:
-        plt.savefig('%s/Figures/%s.pdf' % (directory, names[i]), 
+    if save_fig == True:
+        plt.savefig('%s/%s.pdf' % (fig_dir, names[i]), 
                     format='pdf', bbox_inches='tight')
     
     
@@ -144,14 +150,14 @@ for i in range(h_map.shape[0]):
         cbar.ax.tick_params(labelsize=font_size, pad=5) 
         cbar.set_ticks(c_ticks)
 
-        if savefig == True:
-            plt.savefig('%s/Figures/%s_mask_%i.pdf' % 
-                        (directory, names[i], (1./mask_thresh)), 
+        if save_fig == True:
+            plt.savefig('%s/%s_mask_%i.pdf' % 
+                        (fig_dir, names[i], (1./mask_thresh)), 
                         format='pdf', bbox_inches='tight')
 
 
 # generate visual images
-vis = np.load('%s/visual.npy' % directory)  
+vis = np.load('%s/visual.npy' % processed_dir)  
 vis = vis[1:-1,1:-1]  # make same size as heatmaps (if using 3x3 averaging)
           
 v_min = np.percentile(vis,1)
@@ -169,8 +175,8 @@ cax = divider.append_axes("right", size="3%", pad=0.07)
 cbar = plt.colorbar(im,cax=cax)
 cbar.ax.tick_params(labelsize=font_size, pad=5) 
 
-if savefig == True:
-    plt.savefig('%s/Figures/visual_average.pdf' % directory, 
+if save_fig == True:
+    plt.savefig('%s/visual_average.pdf' % fig_dir, 
                 format='pdf', bbox_inches='tight')
     
 scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
@@ -179,7 +185,7 @@ scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 with open('log.txt', 'a+') as file:
     file.write("%s: Generate Parameter Heatmaps" % scriptName + "\n")
     file.write("--------------------------------------" + "\n")
-    file.write("Parameter heatmap figures saved: %s" % savefig + "\n\n")
+    file.write("Parameter heatmap figures saved: %s" % save_fig + "\n\n")
     file.write("========================================" + "\n")
     file.write("++++++++++++++++++++++++++++++++++++++++" + "\n")
     file.write("========================================" + "\n\n")
