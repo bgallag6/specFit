@@ -1,18 +1,20 @@
-#
-# Create symlink in ./test/Images to directory of raw images
-# Create symlink in ./test/Processed to directory to store processed data
-#
 # Usage:
-#	make tiff [N=1]
-#   make fits [N=1]
-# If mpiexec is available and N is not specified, default is to use 
-# all processors.
+#	make tiff
+# or
+#   make fits
+# or
+#   make jpg
+#
+# If mpiexec is available all processors are used. To change this, specify
+# the number of processors to use on the command line, e.g.
+#
+#   make tiff N=2
 
 SHELL := /bin/bash
 # Raw image files ($@ expands to Makefile target, e.g., tiff, fits, jpg)
-raw_dir=./test/Images/$@
+raw_dir=./images/raw/$@
 # Processed .npy files
-processed_dir=./test/Processed/$@
+processed_dir=./images/processed/$@
 
 # See if MPI is available
 MPI := $(shell command -v mpiexec)
@@ -29,15 +31,12 @@ else
 	PREFIX="mpiexec -n $(N)"
 endif
 
-all:
-	echo "N = $(N) PREFIX = $(PREFIX)"
-
-tiff: $(raw_dir)
+tiff:
 	python preProcessTIFF.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
 	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
 	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
+	python paramPlot.py --processed_dir $(processed_dir)
 	python specVis.py --processed_dir $(processed_dir)
-#	python paramPlot.py --processed_dir $(processed_dir)
 
 fits:
 	python preProcessFITS1.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
