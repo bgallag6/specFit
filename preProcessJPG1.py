@@ -5,10 +5,6 @@ Created on Fri Aug 17 12:11:12 2018
 @author: Brendan
 """
 
-
-
-
-
 import glob
 import numpy as np
 from astropy.time import Time

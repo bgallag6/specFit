@@ -1,5 +1,5 @@
 # Usage:
-#	make tiff
+#	make demo
 # or
 #   make fits
 # or
@@ -8,7 +8,12 @@
 # If mpiexec is available all processors are used. To change this, specify
 # the number of processors to use on the command line, e.g.
 #
-#   make tiff N=2
+#   make demo N=2
+#
+# The directory of the raw images files can be changed using, e.g.,
+#   make demo raw_dir=DIRNAME
+# The directory where the processed files are placed can be changed using, e.g.,
+#   make demo processed_dir=DIRNAME
 
 SHELL := /bin/bash
 # Raw image files ($@ expands to Makefile target, e.g., tiff, fits, jpg)
@@ -31,8 +36,8 @@ else
 	PREFIX="mpiexec -n $(N)"
 endif
 
-tiff:
-	python preProcessTIFF.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
+demo:
+	python preProcessDemo.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
 	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
 	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
 	python paramPlot.py --processed_dir $(processed_dir)

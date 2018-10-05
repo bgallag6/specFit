@@ -8,9 +8,9 @@ The `specFit` Python library extracts intensity time series from each pixel loca
 
 Default parametric spectral models are included in `specModel.py`, and instructions are provided for incorporating user-defined models.  The included YAML configuration file `specFit.py` is used to pass arguments to `specModel.py` such as parameter bounds.
 
-Although this library was developed for use with extreme ultraviolet (EUV) space-based images of the solar corona [https://arxiv.org/abs/1707.02448](https://arxiv.org/abs/1707.02448), it can be used with arbitrary image sequences. Examples of each use-case is given. 
+Although this library was developed for use with extreme ultraviolet (EUV) space-based images of the solar corona [https://arxiv.org/abs/1707.02448](https://arxiv.org/abs/1707.02448), it can be used with arbitrary image sequences. Examples of both use-cases are given. 
 
-Other data types should adapt well to this software, though adjustments may be necessary depending on the user's purpose. Fundamentally, all uses of this library requires a two-dimensional observation/image sequence as an input, along with a timestamp associated with each image.
+Fundamentally, all uses of this library requires a two-dimensional observation/image sequence as an input, along with a timestamp associated with each image.
 
 ## 1. Install and Test
 
@@ -22,7 +22,9 @@ All of these dependencies are included in Anaconda except `sunpy`. If using Anac
 git clone https://github.com/bgallag6/specFit.git
 make tiff
 # or
-make fits
+make jpg
+# or
+pip install sunpy && make fits
 ```
 
 If `mpiexec` is installed, some of the code runs in parallel using all available processors. To force usage of only one processor, use
@@ -35,10 +37,10 @@ make fits N=1
 
 ## 2. Using your own data
 
-To use this library, a pre-processing program must create `dataCube.npy` and `timestamps.npy`. It is suggested that a user starts by modifying `preProcessTIFF.py`, which generates test TIFF files and then creates the needed `.npy` files. After modifying this file, all of the processing steps can be executed using
+To use this library, a pre-processing program must create `dataCube.npy` and `timestamps.npy`. It is suggested that a user starts by modifying `preProcessDemo.py`, which generates test TIFF files and then creates the needed `.npy` files. After modifying this file, all of the processing steps can be executed using
 
 ```
-make tiff
+make demo
 ```
 
 Edit `Makefile` to see the system commands that are executed.
