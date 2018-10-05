@@ -3,20 +3,17 @@
 Created on Wed Apr  4 13:28:45 2018
 
 @author: Brendan
-"""
 
-"""
-######################
-# run with:
-# $ python specFit.py
-# $ mpiexec -n N python specFit.py    (N = number of processors)
-######################
+Usage:
+  python specFit.py --processed_dir DIR --config [specFit_config.yaml] [--mmap_spectra [True]|False]
+or
+  mpiexec -n N python specFit.py ...
+where N = number of processors.
 """
 
 from timeit import default_timer as timer
 import numpy as np
 from scipy.optimize import curve_fit as Fit
-import scipy.signal
 from scipy import fftpack
 from scipy.stats.stats import pearsonr 
 import yaml
@@ -26,12 +23,27 @@ import datetime
 import os   
 import sys     
 
-
 havempi = True
 try:
   from mpi4py import MPI
 except:
   havempi = False
+
+import argparse
+parser = argparse.ArgumentParser(description='specFit.py')
+parser.add_argument('--processed_dir', type=str)
+parser.add_argument('--mmap_spectra', type=str, default=True)
+parser.add_argument('--config', type=str, default='specFit_config.yaml')
+args = parser.parse_args()
+
+processed_dir = args.processed_dir
+mmap_spectra = args.mmap_spectra
+config = args.config
+
+with open(config, 'r') as stream:
+    cfg = yaml.load(stream)
+
+wavelength = cfg['wavelength']
 
 def specFit( subcube, subcube_StdDev ):
         
@@ -194,13 +206,6 @@ if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
 
-with open('specFit_config.yaml', 'r') as stream:
-    cfg = yaml.load(stream)
-
-directory = cfg['processed_dir']
-date = cfg['date']
-wavelength = cfg['wavelength']
-mmap_spectra = cfg['mmap_spectra']
 M1_low = cfg['M1_low']
 M1_high = cfg['M1_high']
 M2_low = cfg['M2_low']
@@ -211,11 +216,11 @@ M2_guess = cfg['M2_guess']
 
 if mmap_spectra == True:
     # load memory-mapped array as read-only
-    cube = np.load('%s/specCube.npy' % directory, mmap_mode='r')
-    cube_StdDev = np.load('%s/specUnc.npy' % directory, mmap_mode='r')
+    cube = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
+    cube_StdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
 else:
-    cube = np.load('%s/specCube.npy' % directory)
-    cube_StdDev = np.load('%s/specUnc.npy' % directory)
+    cube = np.load('%s/specCube.npy' % processed_dir)
+    cube_StdDev = np.load('%s/specUnc.npy' % processed_dir)
 
 # Split the data based on no. of processors
 chunks = np.array_split(cube, size) # TODO: Needed if size = 1?
@@ -224,8 +229,8 @@ chunks_StdDev = np.array_split(cube_StdDev, size)
 
 ### determine frequency values that FFT will evaluate
 ## use frequencies array if exists
-if os.path.isfile('%s/frequencies.npy' % directory):
-    freqs = np.load('%s/frequencies.npy' % directory)
+if os.path.isfile('%s/frequencies.npy' % processed_dir):
+    freqs = np.load('%s/frequencies.npy' % processed_dir)
 else:
     if wavelength in [1600, 1700]:
         time_step = 24
@@ -276,10 +281,10 @@ if rank == 0:
     T_min_final, T_sec_final = divmod(T_final, 60)
     T_hr_final, T_min_final = divmod(T_min_final, 60)
     print("Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)   
-    print("Just finished region: %s %iA" % (date, wavelength), flush=True)
+    #print("Just finished region: %s %iA" % (date, wavelength), flush=True)
   
     print("Saving files...", flush=True)
-    np.save('%s/param.npy' % directory, stack_p)
+    np.save('%s/param.npy' % processed_dir, stack_p)
   
     tEnd0 = datetime.datetime.fromtimestamp(time.time())
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
