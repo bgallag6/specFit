@@ -8,7 +8,7 @@ Created on Fri Apr  6 15:54:30 2018
 """
 ######################
 # run with:
-# $ mpiexec -n N python processFITS1.py --processed_dir DIR --raw_dir DIR
+# $ mpiexec -n N python preProcessFITS.py --processed_dir DIR --raw_dir DIR
 # N = = number of processors
 ######################
 """
@@ -24,7 +24,6 @@ from sunpy.coordinates import frames
 from sunpy.physics.solar_rotation import calculate_solar_rotate_shift
 from sunpy.physics.differential_rotation import diffrot_map
 from timeit import default_timer as timer
-import yaml
 import time
 import datetime
 import sys
@@ -40,7 +39,7 @@ except:
 sub_reg_coords = [155,270,200,290]
 
 import argparse
-parser = argparse.ArgumentParser(description='preProcessFITS1.py')
+parser = argparse.ArgumentParser(description='preProcessFITS.py')
 parser.add_argument('--processed_dir', type=str)
 parser.add_argument('--raw_dir', type=str)
 parser.add_argument('--Nfiles', type=str, default="all")
@@ -200,9 +199,7 @@ xminF = mapShape[1] - np.min(xminindF)
 chunks = np.array_split(flist, size)
 
 # specify which chunks should be handled by each processor
-for i in range(size):
-    if rank == i:
-        subcube = chunks[i]
+subcube = chunks[rank]
 
 start = timer()
 
@@ -239,6 +236,35 @@ if rank == 0:
     np.save('%s/exposures.npy' % processed_dir, ex_arr)
     np.save('%s/timestamps.npy' % processed_dir, tArr)
     np.save('%s/visual.npy' % processed_dir, vAvgArr)
+    
+    
+    # Load, stack, and save dataCube chunks    
+    print("Merging dataCube chunks...", flush=True)
+    
+    cube_temp = []
+    
+    # load derotated cube chunks
+    for i in range(size):
+        temp = np.load('%s/chunk_%i_of_%i.npy' % (processed_dir, i+1, size))
+        cube_temp.append(temp)
+        
+    cube_final = np.vstack(cube_temp)
+    
+    del cube_temp
+    
+    # delete temporary chunks
+    print("Deleting temporary files...", flush=True)
+    
+    for j in range(size):
+        
+        fn = '%s/chunk_%i_of_%i.npy' % (processed_dir, j+1, size)
+        
+        # if file exists, delete it
+        if os.path.isfile(fn): os.remove(fn)
+    
+    print("Saving final dataCube...", flush=True)
+    
+    np.save('%s/dataCube.npy' % processed_dir, cube_final)
   
     T_final = timer() - start
     T_min_final, T_sec_final = divmod(T_final, 60)

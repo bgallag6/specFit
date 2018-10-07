@@ -5,6 +5,14 @@ Created on Fri Aug 17 12:11:12 2018
 @author: Brendan
 """
 
+"""
+######################
+# run with:
+# $ mpiexec -n N python preProcessJPG.py --processed_dir DIR --raw_dir DIR
+# N = = number of processors
+######################
+"""
+
 import glob
 import numpy as np
 from astropy.time import Time
@@ -12,9 +20,28 @@ import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS
 from timeit import default_timer as timer
-from mpi4py import MPI
 import yaml
 #import piexif  # python 2.6+ only?
+import os
+
+havempi = True
+try:
+  from mpi4py import MPI
+except:
+  havempi = False
+
+import argparse
+parser = argparse.ArgumentParser(description='preProcessJPG.py')
+parser.add_argument('--processed_dir', type=str)
+parser.add_argument('--raw_dir', type=str)
+parser.add_argument('--Nfiles', type=str, default="all")
+
+args = parser.parse_args()
+
+raw_dir = args.raw_dir
+processed_dir = args.processed_dir
+if not os.path.exists(raw_dir): os.makedirs(raw_dir)
+if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 
 ## load jpg images, convert to grayscale "matching" original FITS image   
@@ -76,27 +103,30 @@ def datacube(flist_chunk):
             print("Currently on row %i of %i, estimated time remaining: %i:%.2i:%.2i" % (count, nf1, T_hr2, T_min2, T_sec2), flush=True)
         T1 = T
 
-    np.save('%s/chunk_%i_of_%i' % (datDir, rank+1, size), dCube)
+    np.save('%s/chunk_%i_of_%i' % (processed_dir, rank+1, size), dCube)
     
     #return dCube_trim
     return exposure, timestamp, vis_avg
-    
 
-comm = MPI.COMM_WORLD  # set up comms
-rank = comm.Get_rank()  # Each processor gets its own "rank"
-size = MPI.COMM_WORLD.Get_size()  # How many processors do we have? (pulls from "-n 4" specified in terminal execution command)
+##############################################################################
+if havempi:
+  # Get_size() pulls from "-n N" specified on command line
+  comm = MPI.COMM_WORLD   # Set up comms
+  rank = comm.Get_rank()  # Each processor gets its own "rank"
+  size = comm.Get_size()
+else:
+  comm = None
+  rank = 0
+  size = 1    
 
 fmt = "%Y:%m:%d %H:%M:%S"
 
-## import program configurations from file
-with open('specFit_config.yaml', 'r') as stream:
-    cfg = yaml.load(stream)
+# create a list of all the jpg files
+flist = sorted(glob.glob('%s/*.jpg' % raw_dir))
 
-imDir = cfg['jpg_dir']
-datDir = cfg['processed_dir']
-
-# create a list of all the fits files. This is USER-DEFINED
-flist = sorted(glob.glob('%s/*.jpg' % imDir))
+if Nfiles != "all":
+    flist = flist[0:int(Nfiles)]
+    
 nf = len(flist)
 
 # Select the middle image, to derotate around
@@ -106,9 +136,7 @@ mid_file = np.int(np.floor(nf / 2))
 chunks = np.array_split(flist, size)
 
 # specify which chunks should be handled by each processor
-for i in range(size):
-    if rank == i:
-        subcube = chunks[i]
+subcube = chunks[rank]
 
 start = timer()
 
@@ -121,26 +149,59 @@ all_v_avg = comm.gather(v_avg, root=0)
 
 # Have one node stack the results
 if rank == 0:
-  ex_arr = np.hstack(all_ex)
-  t_arr = np.hstack(all_t)
+    if havempi:
+        ex_arr = np.hstack(all_ex)
+        tArr = np.hstack(all_t)
+    else:
+        ex_arr = ex
+        tArr = t
+        all_v_avg = [v_avg]
   
-  t_arr -= t_arr[0]  # calculate time since first image
-  t_arr = np.around(t_arr*86400)  # get the time value in seconds, and round to nearest whole number
+    tArr -= tArr[0]  # calculate time since first image
+    tArr = np.around(tArr*86400)  # get timestamps in seconds
   
-  # Calculate averaged visual image
-  for j in range(len(all_v_avg)):
-      if j == 0:
-          v_avg_arr = all_v_avg[j]
-      else:
-          v_avg_arr += all_v_avg[j]
-  v_avg_arr /= nf
+    # Calculate averaged visual image
+    for j in range(len(all_v_avg)):
+        if j == 0:
+            v_avg_arr = all_v_avg[j]
+        else:
+            v_avg_arr += all_v_avg[j]
+    v_avg_arr /= nf
   
-  np.save('%s/exposures.npy' % datDir, ex_arr)
-  np.save('%s/timestamps.npy' % datDir, t_arr)
-  np.save('%s/visual.npy' % datDir, v_avg_arr)
+    np.save('%s/exposures.npy' % processed_dir, ex_arr)
+    np.save('%s/timestamps.npy' % processed_dir, tArr)
+    np.save('%s/visual.npy' % processed_dir, v_avg_arr)
   
-  T_final = timer() - start
-  T_min_final, T_sec_final = divmod(T_final, 60)
-  T_hr_final, T_min_final = divmod(T_min_final, 60)
-  print("Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)   
-  #print("Just finished region: %s %iA" % (date, wavelength), flush=True)
+    # Load, stack, and save dataCube chunks    
+    print("Merging dataCube chunks...", flush=True)
+    
+    cube_temp = []
+    
+    # load derotated cube chunks
+    for i in range(size):
+        temp = np.load('%s/chunk_%i_of_%i.npy' % (processed_dir, i+1, size))
+        cube_temp.append(temp)
+        
+    cube_final = np.vstack(cube_temp)
+    
+    del cube_temp
+    
+    # delete temporary chunks
+    print("Deleting temporary files...", flush=True)
+    
+    for j in range(size):
+        
+        fn = '%s/chunk_%i_of_%i.npy' % (processed_dir, j+1, size)
+        
+        # if file exists, delete it
+        if os.path.isfile(fn): os.remove(fn)
+    
+    print("Saving final dataCube...", flush=True)
+    
+    np.save('%s/dataCube.npy' % processed_dir, cube_final)
+  
+    T_final = timer() - start
+    T_min_final, T_sec_final = divmod(T_final, 60)
+    T_hr_final, T_min_final = divmod(T_min_final, 60)
+    print("Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)   
+    #print("Just finished region: %s %iA" % (date, wavelength), flush=True)

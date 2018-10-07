@@ -44,16 +44,14 @@ demo:
 	python specVis.py --processed_dir $(processed_dir)
 
 fits:
-	python preProcessFITS1.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
-	python preProcessFITS2.py --processed_dir $(processed_dir)
+	$(PREFIX) python preProcessFITS.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
 	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
 	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
 	python paramPlot.py
 	python specVis.py
 
 jpg:
-	python preProcessJPG1.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
-	python preProcessJPG2.py --processed_dir $(processed_dir)
+	$(PREFIX) python preProcessJPG.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
 	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
 	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
 	python paramPlot.py
