@@ -16,5 +16,5 @@ bin_frac: 1
 
 save_fig: False
 
-specVis_dir: "./test/Processed/tiff"
+specVis_dir: "./images/processed/fits"
 

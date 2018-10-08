@@ -48,8 +48,9 @@ args = parser.parse_args()
 
 raw_dir = args.raw_dir
 processed_dir = args.processed_dir
-if not os.path.exists(raw_dir): os.makedirs(raw_dir)
-if not os.path.exists(processed_dir): os.makedirs(processed_dir)
+Nfiles = args.Nfiles
+#if not os.path.exists(raw_dir): os.makedirs(raw_dir)
+#if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 def datacube(flist_chunk):
     # rebin region to desired fraction 
@@ -133,6 +134,8 @@ else:
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
+    if not os.path.exists(raw_dir): os.makedirs(raw_dir)
+    if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 # set variable from config file
 x1,x2,y1,y2 = sub_reg_coords

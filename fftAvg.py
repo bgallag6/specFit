@@ -20,7 +20,6 @@ where N = number of processors
 import numpy as np
 from timeit import default_timer as timer
 from scipy import fftpack
-import yaml
 import time
 import datetime
 import sys
@@ -52,7 +51,7 @@ def cfg():
         except:
             raise ValueError("time_step must be a float or 'min' or 'mode'")
     
-    print('Using: processed_dir = %s, num_segments = %s, time_step = %s, mmap_datacube = %s' % (processed_dir, num_segments, str(tStep), str(mmap_datacube)))
+    print('Using: processed_dir = %s, num_segments = %s, time_step = %s, mmap_datacube = %s' % (processed_dir, num_segments, str(tStep), str(mmap_datacube)), flush=True)
 
     return processed_dir, num_segments, tStep, mmap_datacube
     

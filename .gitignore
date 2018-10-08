@@ -109,3 +109,7 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# other
+log.txt
+mainFITS.sh
