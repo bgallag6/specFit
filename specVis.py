@@ -219,10 +219,9 @@ def onclick(event):
     global ix, iy
     ixx, iyy = event.xdata, event.ydata
     if ixx > 1. and iyy > 1.:
-        ax2.clear()
         del ax1.collections[:]
         plt.draw()
-        print ('x = %i, y = %i' % ( ixx, iyy))  # print location of pixel
+        print("pixel: (%ix, %iy)" % (ixx, iyy))  # print location of pixel
         ix = int(ixx)
         iy = int(iyy)
         
@@ -302,29 +301,21 @@ def onclick(event):
         
         pLoc = (1./np.exp(fp22))/60.
         
-        ax2.loglog(freqs, s, 'k', linewidth=1.5)
-        
-        #ax2.loglog(f, m1_fit, 'r', linewidth=1.3, label='M1')
-        ax2.loglog(freqs, m2_fit2, c='purple', lw=1.5, label='M2')
-        ax2.loglog(freqs, m1_fit2, c='g', lw=1.5, label='M2: Power Law')
-        ax2.loglog(freqs, lorentz, c='g', ls='--', lw=1.5, label='M2: Lorentz')
-        
-        ax2.set_xlabel('Frequency [Hz]', fontsize=fontSz-3, labelpad=5)
-        ax2.set_ylabel('Power', fontsize=fontSz-3, labelpad=5)
-        axvline(x=0.00333,color='k',ls='dashed', label='5 minutes')
-        axvline(x=0.00555,color='k',ls='dotted', label='3 minutes')
-        ax2.set_title('Spectra Fit: Pixel (%ix , %iy)' % (ix, iy), fontsize=fontSz-5)
-        
-        ax2.text(0.011, 10**-0.5, r'$n$ = {0:0.2f}'.format(n22), fontsize=fontSz-2)
-        ax2.text(0.011, 10**-0.75, r'$\alpha$ = {0:0.2e}'.format(P22), fontsize=fontSz-2)
-        ax2.text(0.011, 10**-1.00, r'$\beta$ = {0:0.1f} [min]'.format(pLoc), fontsize=fontSz-2)
-        ax2.text(0.0061, 10**-1.25, r'$FWHM$ = {0:0.1f} [min]'.format(fwhm), fontsize=fontSz-2)
-        legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)
-        ax2.set_xlim(10**-4.5, 10**-1.3)
-        ax2.set_ylim(10**-5, 10**0)   
+        # update subplots
         ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
-        for label in legend.get_lines():
-                label.set_linewidth(2.0)  # the legend line width   
+        
+        title.set_text('Spectra Fit: Pixel (%ix , %iy)' % (ix, iy))
+        
+        curveSpec.set_ydata(s)
+        #curveM1A.set_ydata(m1_fit)
+        curveM2.set_ydata(m2_fit2)
+        curveM1.set_ydata(m1_fit2)
+        curveLorentz.set_ydata(lorentz)
+        
+        p_index.set_text(r'$n$ = {0:0.2f}'.format(n22))
+        p_amp.set_text(r'$\alpha$ = {0:0.2e}'.format(P22))
+        p_loc.set_text(r'$\beta$ = {0:0.1f} [min]'.format(pLoc))
+        p_wid.set_text(r'$FWHM$ = {0:0.1f} [min]'.format(fwhm))
                 
     return ix, iy
 
@@ -341,7 +332,7 @@ plt.rcParams["font.family"] = "Times New Roman"
 fontSz = 20 
 
 #directory = 'S:'
-#directory = 'C:/Users/Brendan/Desktop/specFit/test'
+directory = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
 #directory = './test/validation'
 date = '20120606'
 wavelength = 1600
@@ -360,7 +351,7 @@ M2_high = cfg['M2_high']
 spec_unc = cfg['spec_unc']
 M1_guess = cfg['M1_guess']
 M2_guess = cfg['M2_guess']
-directory = cfg['specVis_dir']
+#directory = cfg['specVis_dir']
 
 global spectra
 
@@ -457,17 +448,46 @@ axmask = plt.axes([0.55, 0.9, 0.05, 0.063])
 axslider = plt.axes([0.64, 0.915, 0.15, 0.03])
 axsaveFig = plt.axes([0.91, 0.9, 0.05, 0.063])
 
+
 # set up spectra subplot
 ax2 = plt.subplot2grid((30,31),(4, 17), colspan=13, rowspan=24)
-ax2.loglog()
-ax2.set_xlim(10**-4.5, 10**-1.3)
-ax2.set_ylim(10**-5, 10**0)  
 
-fig1.canvas.mpl_connect('button_press_event', onclick)
+xspan = np.log10(freqs[-1]) - np.log10(freqs[0])
+xlow = 10**(np.log10(freqs[0]) - (xspan/10))
+xhigh = 10**(np.log10(freqs[-1]) + (xspan/10))
 
-ax2.set_title('Spectra Fit: Pixel ( , )', fontsize=15)
+yspan = np.log10(np.percentile(spectra, 99.9)) - np.log10(np.percentile(spectra, 0.1))
+ylow = 10**(np.log10(np.percentile(spectra, 0.1)) - (yspan/10))
+yhigh = 10**(np.log10(np.percentile(spectra, 99.9)) + (yspan/10))
+
+emptyLine = [0 for i in range(len(freqs))]
+
+title, = ([ax2.set_title('Spectra Fit: Pixel ( , )', fontsize=15)])
 ax2.set_xlabel('Frequency [Hz]', fontsize=fontSz-3, labelpad=5)
 ax2.set_ylabel('Power', fontsize=fontSz-3, labelpad=5)
+ax2.set_ylim(ylow, yhigh)
+ax2.set_xlim(xlow, xhigh) 
+
+curveSpec, = ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
+#curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
+curveM2, = ax2.loglog(freqs, emptyLine, c='purple', lw=1.5, label='M2')
+curveM1, = ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
+curveLorentz, = ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentz')
+axvline(x=0.00333,color='k',ls='dashed', label='5 minutes')
+axvline(x=0.00555,color='k',ls='dotted', label='3 minutes')
+
+legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)   
+for label in legend.get_lines():
+        label.set_linewidth(2.0)  # the legend line width
+        
+p_index, = ([ax2.text(0.011, 10**-0.5, '', fontsize=fontSz-2)])
+p_amp, = ([ax2.text(0.011, 10**-0.75, '', fontsize=fontSz-2)])
+p_loc, = ([ax2.text(0.011, 10**-1.00, '', fontsize=fontSz-2)])
+p_wid, = ([ax2.text(0.0061, 10**-1.25, '', fontsize=fontSz-2)])
+ 
+       
+fig1.canvas.mpl_connect('button_press_event', onclick)
+
 plt.tight_layout()
 
 # add callbacks to each button - linking corresponding action
