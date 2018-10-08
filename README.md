@@ -6,7 +6,7 @@
 
 The `specFit` Python library extracts intensity time series from each pixel location in spatially co-aligned temporal sequences of 2-dimensional images, transforms each time series into power spectra via the Fast Fourier Transform, fits a parametric model to the spectra, and extracts and visualizes the best-fit parameter values as heatmaps.  The included Message Passing Interface bindings allow the computationally expensive steps to be parallelized. `specVis.py`, an included GUI-based tool, allows users to explore the spatial dependence of model parameters as heatmaps and browse pixel-level spectra and model fits.
 
-Default parametric spectral models are included in `specModel.py`, and instructions are provided for incorporating user-defined models.  The included YAML configuration file `specFit.py` is used to pass arguments to `specModel.py` such as parameter bounds.
+Default parametric spectral models are included in `specModel.py`, and instructions are provided for incorporating user-defined models.  The included YAML configuration file `specFit_config.yaml` is used to pass arguments to `specFit.py` such as parameter bounds.
 
 Although this library was developed for use with extreme ultraviolet (EUV) space-based images of the solar corona [https://arxiv.org/abs/1707.02448](https://arxiv.org/abs/1707.02448), it can be used with arbitrary image sequences. Examples of both use-cases are given. 
 
