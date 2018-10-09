@@ -37,7 +37,7 @@ make fits N=1
 
 ## 2. Using your own data
 
-To use this library, a pre-processing program must create `dataCube.npy` and `timestamps.npy`. It is suggested that a user starts by modifying `preProcessDemo.py`, which generates test TIFF files and then creates the needed `.npy` files. After modifying this file, all of the processing steps can be executed using
+To use this library, a pre-processing program must create `dataCube.npy`, `timestamps.npy`, and `exposures.npy`. It is suggested that a user starts by modifying `preProcessDemo.py`, which generates test TIFF files and then creates the needed `.npy` files. After modifying this file, all of the processing steps can be executed using
 
 ```
 make demo
