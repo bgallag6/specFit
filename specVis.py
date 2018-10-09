@@ -8,7 +8,6 @@ Created on Thu May 24 08:25:54 2018
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit as Fit
-from pylab import axvline
 import sunpy
 import sunpy.cm
 from scipy import fftpack
@@ -22,9 +21,31 @@ import yaml
 from specModel import M1, M2, m2
 
     
-def find_nearest(array,value):
-    idx = (np.abs(array-value)).argmin()
-    return array[idx]
+def ax2setup():
+    global title, p_index, p_amp, p_loc, p_wid
+    global curveSpec, curveM2, curveM1, curveLorentz
+    title, = ([ax2.set_title('Spectra Fit: Pixel ( , )', fontsize=fontSize)])
+    ax2.set_xlabel('Frequency [Hz]', fontsize=fontSize, labelpad=5)
+    ax2.set_ylabel('Power', fontsize=fontSize, labelpad=5)
+    ax2.set_ylim(ylow, yhigh)
+    ax2.set_xlim(xlow, xhigh) 
+    
+    curveSpec, = ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
+    #curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
+    curveM2, = ax2.loglog(freqs, emptyLine, c='purple', lw=1.5, label='M2')
+    curveM1, = ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
+    curveLorentz, = ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentz')
+    ax2.axvline(x=(1./300.), color='k', ls='dashed', label='5 minutes')
+    ax2.axvline(x=(1./180.), color='k', ls='dotted', label='3 minutes')
+    
+    legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)   
+    for label in legend.get_lines():
+            label.set_linewidth(2.0)  # the legend line width
+            
+    p_index, = ([ax2.text(0.010, 10**-0.5, '', fontsize=fontSize)])
+    p_amp, = ([ax2.text(0.010, 10**-0.75, '', fontsize=fontSize)])
+    p_loc, = ([ax2.text(0.010, 10**-1.00, '', fontsize=fontSize)])
+    p_wid, = ([ax2.text(0.00635, 10**-1.25, '', fontsize=fontSize)])
     
 def update(val):
     global mask_val
@@ -119,7 +140,7 @@ class Index(object):
     def coeff(self, event):
         global marker
         marker = 0
-        plotMap(marker)  # could just do this
+        plotMap(marker)
         return marker       
 
     def index(self, event):
@@ -128,7 +149,7 @@ class Index(object):
         plotMap(marker)
         return marker     
         
-    def tail(self, event):  # meh, should probably fix this
+    def tail(self, event):
         global marker
         marker = 2
         plotMap(marker)
@@ -184,8 +205,7 @@ class Index(object):
         elif toggle2 == 1:
             histMask(marker)
         plt.draw()
-
-        
+      
     def mask(self, event):
         global toggle2
         global marker
@@ -219,15 +239,16 @@ def onclick(event):
     global ix, iy
     ixx, iyy = event.xdata, event.ydata
     if ixx > 1. and iyy > 1.:
+        ax2.clear()
         del ax1.collections[:]
         plt.draw()
-        print("pixel: (%ix, %iy)" % (ixx, iyy))  # print location of pixel
+        ax2setup()
+        
+        print("pixel: (%ix, %iy)" % (ixx, iyy))
         ix = int(ixx)
         iy = int(iyy)
         
-        s = np.zeros((spectra.shape[2]))
-    
-        s[:] = spectra[iy][ix][:]
+        s = np.array(spectra[iy][ix])
         
         # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
         if spec_unc == 'stddev':
@@ -239,44 +260,41 @@ def onclick(event):
         ## fit data to combined power law plus gaussian component model
         
         try:
-            nlfit_l, nlpcov_l = Fit(M1, freqs, s, p0=M1_guess, 
-                                    bounds=(M1_low, M1_high), sigma=ds, 
-                                    method='dogbox')
+            m1_param = Fit(M1, freqs, s, p0=M1_guess, bounds=(M1_low, M1_high), 
+                          sigma=ds, method='dogbox')[0]
           
         except RuntimeError: print("Error M1 - curve_fit failed")
         except ValueError: print("Error M1 - inf/NaN")
         
-        A, n, C = nlfit_l  # unpack fitting parameters
+        A, n, C = m1_param  # unpack model parameters
          
        
         try:                                                          
-            nlfit_gp, nlpcov_gp = Fit(M2, freqs, s, p0=M2_guess, 
-                                      bounds=(M2_low,M2_high), sigma=ds, 
-                                      method='dogbox', max_nfev=3000)
+            m2_param0 = Fit(M2, freqs, s, p0=M2_guess, bounds=(M2_low, M2_high), 
+                           sigma=ds, method='dogbox', max_nfev=3000)[0]
         
         except RuntimeError: print("Error M2 - curve_fit failed")
         except ValueError: print("Error M2 - inf/NaN")
 
         
-        A2, n2, C2, P2, fp2, fw2 = nlfit_gp  # unpack fitting parameters
+        #A2, n2, C2, P2, fp2, fw2 = m2_param0
         #print nlfit_gp
                
-        try:           
-            nlfit_gp2, nlpcov_gp2 = Fit(M2, freqs, s, p0=nlfit_gp, 
-                                        bounds=(M2_low, M2_high), sigma=ds, 
-                                        max_nfev=3000)    
+        try:   
+            m2_param = Fit(M2, freqs, s, p0=m2_param0, bounds=(M2_low, M2_high),
+                            sigma=ds, max_nfev=3000)[0]    
            
         except RuntimeError: print("Error M2 - curve_fit failed")
         except ValueError: print("Error M2 - inf/NaN")
         
-        A22, n22, C22, P22, fp22, fw22 = nlfit_gp2  # unpack model parameters     
-        #print nlfit_gp2
+        A22, n22, C22, P22, fp22, fw22 = m2_param     
+        #print m2_param
                        
         # create models from parameters    
-        m1_fit = M1(freqs, A, n, C)    
-        lorentz = m2(freqs,P22,fp22,fw22)
-        m2_fit2 = M2(freqs, A22,n22,C22,P22,fp22,fw22) 
-        m1_fit2 = M1(freqs, A22,n22,C22)      
+        m1_fit = M1(freqs, *m1_param)    
+        lorentz = m2(freqs, P22, fp22, fw22)
+        m2_fit2 = M2(freqs, *m2_param) 
+        m1_fit2 = M1(freqs, A22, n22, C22)      
         
         residsM1 = (s - m1_fit)
         chisqrM1 =  ((residsM1/ds)**2).sum() 
@@ -329,11 +347,10 @@ def onclick(event):
 print("Starting specVis...", flush=True)
 
 plt.rcParams["font.family"] = "Times New Roman"
-fontSz = 20 
+fontSize = 15
 
-#directory = 'S:'
+
 directory = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
-#directory = './test/validation'
 date = '20120606'
 wavelength = 1600
 
@@ -363,11 +380,12 @@ else:
     spectra = np.load('%s/specCube.npy' % directory)
     stdDev = np.load('%s/specUnc.npy' % directory)
 
-h_map = np.load('%s/param.npy' % directory)
 vis = np.load('%s/visual.npy' % directory)
 
-h_map[4] = (1./(np.exp(h_map[4]))/60.)
-
+haveParam = False
+if os.path.isfile('%s/param.npy' % directory):
+    h_map = np.load('%s/param.npy' % directory)
+    haveParam = True
     
 global marker
 global count
@@ -408,24 +426,75 @@ ds0 = df2
 titles = ['Power Law Slope Coeff.', 'Power Law Index', 'Tail', 
           'Lorentzian Amplitude', 'Lorentzian Location [min]', 
           'Lorentzian Width', 'F-Statistic', 'Averaged Visual Image']
-date_title = '%i/%02i/%02i' % (int(date[0:4]),int(date[4:6]),int(date[6:8]))
+date_title = '%i-%02i-%02i' % (int(date[0:4]),int(date[4:6]),int(date[6:8]))
 
 
 # create figure with heatmap and spectra side-by-side subplots
-fig1 = plt.figure(figsize=(20,10))
+fig1 = plt.figure(figsize=(18,9))
 
 ax1 = plt.gca()
 ax1 = plt.subplot2grid((30,31),(4, 1), colspan=14, rowspan=25)
-ax1.set_xlim(0, h_map.shape[2]-1)
-ax1.set_ylim(0, h_map.shape[1]-1)  
-ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[1]), 
-              y = 1.01, fontsize=17)
 
-param = h_map[1] 
-h_min = np.percentile(param,1) 
-h_max = np.percentile(param,99)
-im, = ([ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, 
-                   vmax=h_max, picker=True)])
+if haveParam:
+    ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[1]), 
+                  y = 1.01, fontsize=17)
+    h_map[4] = (1./(np.exp(h_map[4]))/60.)
+    param = h_map[1] 
+    h_min = np.percentile(param,1) 
+    h_max = np.percentile(param,99)
+    im, = ([ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, 
+                       vmax=h_max, picker=True)])
+    
+    # make toggle buttons to display each parameter's heatmap
+    axcoeff = plt.axes([0.01, 0.9, 0.05, 0.063])
+    axindex = plt.axes([0.07, 0.9, 0.05, 0.063])
+    axtail = plt.axes([0.13, 0.9, 0.05, 0.063])
+    axlorentz_amp = plt.axes([0.19, 0.9, 0.05, 0.063])
+    axlorentz_loc = plt.axes([0.25, 0.9, 0.05, 0.063])
+    axlorentz_wid = plt.axes([0.31, 0.9, 0.05, 0.063])
+    axfstat = plt.axes([0.37, 0.9, 0.05, 0.063])
+    axvisual = plt.axes([0.43, 0.9, 0.05, 0.063])
+    axhist = plt.axes([0.49, 0.9, 0.05, 0.063])
+    axmask = plt.axes([0.55, 0.9, 0.05, 0.063])
+    axslider = plt.axes([0.64, 0.915, 0.15, 0.03])
+    
+    # add callbacks to each button - linking corresponding action
+    callback = Index()
+    
+    bcoeff = Button(axcoeff, 'Coeff.')
+    bcoeff.on_clicked(callback.coeff)
+    bindex = Button(axindex, 'Index')
+    bindex.on_clicked(callback.index)
+    btail = Button(axtail, 'Tail')
+    btail.on_clicked(callback.tail)
+    blorentz_amp = Button(axlorentz_amp, 'Lorentz. Amp')
+    blorentz_amp.on_clicked(callback.lorentz_amp)
+    blorentz_loc = Button(axlorentz_loc, 'Lorentz. Loc')
+    blorentz_loc.on_clicked(callback.lorentz_loc)
+    blorentz_wid = Button(axlorentz_wid, 'Lorentz. Wid')
+    blorentz_wid.on_clicked(callback.lorentz_wid)
+    bfstat = Button(axfstat, 'F-Stat')
+    bfstat.on_clicked(callback.fstat)
+    bvisual = Button(axvisual, 'Visual')
+    bvisual.on_clicked(callback.visual)
+    bhist = Button(axhist, 'Hist.')
+    bhist.on_clicked(callback.hist)
+    bmask = Button(axmask, 'Mask')
+    bmask.on_clicked(callback.mask)
+    slid_mask = Slider(axslider, 'Masking', 0.001, 0.1, valinit=0.005)
+    slid_mask.on_changed(update)
+    
+else:
+    ax1.set_title(r'%s: %i $\AA$ | Visual Average' % (date_title, wavelength), 
+                  y = 1.01, fontsize=17)
+    param = vis
+    h_min = np.percentile(param,1) 
+    h_max = np.percentile(param,99)
+    im, = ([ax1.imshow(param, cmap='sdoaia1600', interpolation='nearest', 
+                       vmin=h_min, vmax=h_max, picker=True)])
+ 
+ax1.set_xlim(0, param.shape[1]-1)
+ax1.set_ylim(0, param.shape[0]-1)    
 
 # design colorbar for heatmaps
 global cbar1
@@ -434,19 +503,15 @@ cax1 = divider.append_axes("right", size="3%", pad=0.07)
 cbar1 = plt.colorbar(im,cax=cax1)
 cbar1.ax.tick_params(labelsize=13, pad=3)   
 
-# make toggle buttons to display each parameter's heatmap
-axcoeff = plt.axes([0.01, 0.9, 0.05, 0.063])
-axindex = plt.axes([0.07, 0.9, 0.05, 0.063])
-axtail = plt.axes([0.13, 0.9, 0.05, 0.063])
-axlorentz_amp = plt.axes([0.19, 0.9, 0.05, 0.063])
-axlorentz_loc = plt.axes([0.25, 0.9, 0.05, 0.063])
-axlorentz_wid = plt.axes([0.31, 0.9, 0.05, 0.063])
-axfstat = plt.axes([0.37, 0.9, 0.05, 0.063])
-axvisual = plt.axes([0.43, 0.9, 0.05, 0.063])
-axhist = plt.axes([0.49, 0.9, 0.05, 0.063])
-axmask = plt.axes([0.55, 0.9, 0.05, 0.063])
-axslider = plt.axes([0.64, 0.915, 0.15, 0.03])
 axsaveFig = plt.axes([0.91, 0.9, 0.05, 0.063])
+
+# add callbacks to each button - linking corresponding action
+callback = Index()
+
+bsaveFig = Button(axsaveFig, 'Save')
+bsaveFig.on_clicked(callback.saveFig)
+
+fig1.canvas.mpl_connect('button_press_event', onclick)
 
 
 # set up spectra subplot
@@ -462,61 +527,8 @@ yhigh = 10**(np.log10(np.percentile(spectra, 99.9)) + (yspan/10))
 
 emptyLine = [0 for i in range(len(freqs))]
 
-title, = ([ax2.set_title('Spectra Fit: Pixel ( , )', fontsize=15)])
-ax2.set_xlabel('Frequency [Hz]', fontsize=fontSz-3, labelpad=5)
-ax2.set_ylabel('Power', fontsize=fontSz-3, labelpad=5)
-ax2.set_ylim(ylow, yhigh)
-ax2.set_xlim(xlow, xhigh) 
-
-curveSpec, = ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
-#curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
-curveM2, = ax2.loglog(freqs, emptyLine, c='purple', lw=1.5, label='M2')
-curveM1, = ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
-curveLorentz, = ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentz')
-axvline(x=0.00333,color='k',ls='dashed', label='5 minutes')
-axvline(x=0.00555,color='k',ls='dotted', label='3 minutes')
-
-legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)   
-for label in legend.get_lines():
-        label.set_linewidth(2.0)  # the legend line width
-        
-p_index, = ([ax2.text(0.011, 10**-0.5, '', fontsize=fontSz-2)])
-p_amp, = ([ax2.text(0.011, 10**-0.75, '', fontsize=fontSz-2)])
-p_loc, = ([ax2.text(0.011, 10**-1.00, '', fontsize=fontSz-2)])
-p_wid, = ([ax2.text(0.0061, 10**-1.25, '', fontsize=fontSz-2)])
- 
-       
-fig1.canvas.mpl_connect('button_press_event', onclick)
+ax2setup()
 
 plt.tight_layout()
-
-# add callbacks to each button - linking corresponding action
-callback = Index()
-
-bcoeff = Button(axcoeff, 'Coeff.')
-bcoeff.on_clicked(callback.coeff)
-bindex = Button(axindex, 'Index')
-bindex.on_clicked(callback.index)
-btail = Button(axtail, 'Tail')
-btail.on_clicked(callback.tail)
-blorentz_amp = Button(axlorentz_amp, 'Lorentz. Amp')
-blorentz_amp.on_clicked(callback.lorentz_amp)
-blorentz_loc = Button(axlorentz_loc, 'Lorentz. Loc')
-blorentz_loc.on_clicked(callback.lorentz_loc)
-blorentz_wid = Button(axlorentz_wid, 'Lorentz. Wid')
-blorentz_wid.on_clicked(callback.lorentz_wid)
-bfstat = Button(axfstat, 'F-Stat')
-bfstat.on_clicked(callback.fstat)
-bvisual = Button(axvisual, 'Visual')
-bvisual.on_clicked(callback.visual)
-bhist = Button(axhist, 'Hist.')
-bhist.on_clicked(callback.hist)
-bmask = Button(axmask, 'Mask')
-bmask.on_clicked(callback.mask)
-bsaveFig = Button(axsaveFig, 'Save')
-bsaveFig.on_clicked(callback.saveFig)
-
-slid_mask = Slider(axslider, 'Masking', 0.001, 0.1, valinit=0.005)
-slid_mask.on_changed(update)
 
 plt.show()

@@ -66,49 +66,47 @@ def specFit( subcube, subcube_StdDev ):
                                      
         ### fit models to spectra using SciPy's Levenberg-Marquart method
         try:
-            nlfit_l, nlpcov_l = Fit(M1, f, s, p0=M1_guess, bounds=(M1_low, M1_high), 
-                                    sigma=ds, method='dogbox')
+            m1_param = Fit(M1, f, s, p0=M1_guess, bounds=(M1_low, M1_high), 
+                           sigma=ds, method='dogbox')[0]
                   
         except RuntimeError: pass
         except ValueError: pass
     
-        A, n, C = nlfit_l
+        A, n, C = m1_param
         
         # first fit M2 model using 'dogbox' method          
         try:                                           
-            nlfit_gp, nlpcov_gp = Fit(M2, f, s, p0=M2_guess, bounds=(M2_low, M2_high), 
-                                      sigma=ds, method='dogbox', max_nfev=3000)
+            m2_param0 = Fit(M2, f, s, p0=M2_guess, bounds=(M2_low, M2_high), 
+                            sigma=ds, method='dogbox', max_nfev=3000)[0]
         
         except RuntimeError: pass
         except ValueError: pass
         
-        A2, n2, C2, P2, fp2, fw2 = nlfit_gp
+        A2, n2, C2, P2, fp2, fw2 = m2_param0
         
         
         # next fit M2 model using default 'trf' method
         try:            
-            nlfit_gp2, nlpcov_gp2 = Fit(M2, f, s, p0=[A2, n2, C2, P2, fp2, fw2], 
-                                        bounds=(M2_low, M2_high), sigma=ds, max_nfev=3000)
+            m2_param = Fit(M2, f, s, p0=m2_param0, bounds=(M2_low, M2_high), 
+                           sigma=ds, max_nfev=3000)[0]
 
         except RuntimeError: pass
         except ValueError: pass
         
-        A22, n22, C22, P22, fp22, fw22 = nlfit_gp2  # unpack model parameters     
+        A22, n22, C22, P22, fp22, fw22 = m2_param  # unpack model parameters     
                        
         # create model functions from fitted parameters
-        m1_fit = M1(f, *nlfit_l)        
-        m2_fit2 = M2(f, *nlfit_gp2)      
+        m1_fit = M1(f, *m1_param)        
+        m2_fit = M2(f, *m2_param)      
         
         #weights = subcube_StdDev[l][m]
         
         residsM1 = (s - m1_fit)
         chisqrM1 =  ((residsM1/ds)**2).sum()
-        #chisqrM1 =  ((residsM1/weights)**2).sum()
         redchisqrM1 = chisqrM1 / float(f.size-3)  
         
-        residsM22 = (s - m2_fit2)
+        residsM22 = (s - m2_fit)
         chisqrM22 = ((residsM22/ds)**2).sum()
-        #chisqrM22 = ((residsM22/weights)**2).sum()
         redchisqrM22 = chisqrM22 / float(f.size-6)         
         
         f_test2 = ((chisqrM1-chisqrM22)/(6-3))/((chisqrM22)/(f.size-6))
@@ -118,7 +116,7 @@ def specFit( subcube, subcube_StdDev ):
         
         
         if chisqrM1 > chisqrM22:
-            rval = pearsonr(m2_fit2, s)[0]
+            rval = pearsonr(m2_fit, s)[0]
             if C22 <= 0.:
                 rollover = np.nan
             else:

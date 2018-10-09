@@ -59,7 +59,7 @@ def fftAvg(subcube):
     
     #from scipy import fftpack
     
-    pixmed = np.empty(subcube.shape[0])
+    timeseries = np.empty(subcube.shape[0])
     spectra_seg = np.zeros((subcube.shape[1],subcube.shape[2],len(freqs)))
     
     start_sub = timer()
@@ -69,10 +69,10 @@ def fftAvg(subcube):
         for jj in range(spectra_seg.shape[1]):        
             
             # extract timeseries + normalize by exposure time
-            pixmed = subcube[:,ii,jj] / exposure     
+            timeseries = subcube[:,ii,jj] / exposure     
             
             # interpolate pixel-intensity values onto specified time grid
-            v_interp = np.interp(t_interp,timestamp,pixmed)  
+            v_interp = np.interp(t_interp, timestamp, timeseries)  
             
             avg_array = np.zeros((len(freqs)))
             
