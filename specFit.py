@@ -44,6 +44,13 @@ with open(config, 'r') as stream:
     cfg = yaml.load(stream)
 
 wavelength = cfg['wavelength']
+M1_low = cfg['M1_low']
+M1_high = cfg['M1_high']
+M2_low = cfg['M2_low']
+M2_high = cfg['M2_high']
+spec_unc = cfg['spec_unc']
+M1_guess = cfg['M1_guess']
+M2_guess = cfg['M2_guess']
 
 def specFit( subcube, subcube_StdDev ):
         
@@ -203,14 +210,6 @@ start = timer()
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
-
-M1_low = cfg['M1_low']
-M1_high = cfg['M1_high']
-M2_low = cfg['M2_low']
-M2_high = cfg['M2_high']
-spec_unc = cfg['spec_unc']
-M1_guess = cfg['M1_guess']
-M2_guess = cfg['M2_guess']
 
 if mmap_spectra == True:
     # load memory-mapped array as read-only
