@@ -1,9 +1,9 @@
 # Usage:
-#	make demo
+#	make demo # processes images in images/raw/demo
 # or
-#   make fits
+#   make fits # processes images in images/raw/fits
 # or
-#   make jpg
+#   make jpg # processes images in images/raw/jpg
 #
 # If mpiexec is available all processors are used. To change this, specify
 # the number of processors to use on the command line, e.g.
