@@ -232,7 +232,80 @@ class Index(object):
                         bbox_inches='tight')
         count += 1
         return count
-  
+
+
+def specFit(s, ds):
+    ## fit data to combined power law plus gaussian component model       
+    try:
+        m1_param = Fit(M1, freqs, s, p0=M1_guess, bounds=(M1_low, M1_high), 
+                      sigma=ds, method='dogbox')[0]
+      
+    except RuntimeError: print("Error M1 - curve_fit failed")
+    except ValueError: print("Error M1 - inf/NaN")
+    
+    A, n, C = m1_param  # unpack model parameters
+     
+   
+    try:                                                          
+        m2_param0 = Fit(M2, freqs, s, p0=M2_guess, bounds=(M2_low, M2_high), 
+                       sigma=ds, method='dogbox', max_nfev=3000)[0]
+    
+    except RuntimeError: print("Error M2 - curve_fit failed")
+    except ValueError: print("Error M2 - inf/NaN")
+
+    
+    #A2, n2, C2, P2, fp2, fw2 = m2_param0
+    #print nlfit_gp
+           
+    try:   
+        m2_param = Fit(M2, freqs, s, p0=m2_param0, bounds=(M2_low, M2_high),
+                        sigma=ds, max_nfev=3000)[0]    
+       
+    except RuntimeError: print("Error M2 - curve_fit failed")
+    except ValueError: print("Error M2 - inf/NaN")
+    
+    A22, n22, C22, P22, fp22, fw22 = m2_param     
+    #print m2_param
+                   
+    # create models from parameters    
+    m1_fit = M1(freqs, *m1_param)    
+    lorentz = m2(freqs, P22, fp22, fw22)
+    m2_fit2 = M2(freqs, *m2_param) 
+    m1_fit2 = M1(freqs, A22, n22, C22)      
+    
+    residsM1 = (s - m1_fit)
+    chisqrM1 =  ((residsM1/ds)**2).sum() 
+    
+    residsM22 = (s - m2_fit2)
+    chisqrM22 = ((residsM22/ds)**2).sum()
+    redchisqrM22 = ((residsM22/ds)**2).sum()/float(freqs.size-6) 
+          
+    f_test2 = ((chisqrM1-chisqrM22)/(6-3))/((chisqrM22)/(freqs.size-6))
+    
+    dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
+    p_val = ff.sf(f_test2, dof1, dof2)
+    
+    # extract the lorentzian amplitude scaling factor
+    amp_scale2 = M1(np.exp(fp22), A22, n22, C22)  
+
+    rval = pearsonr(m2_fit2, s)[0]
+    
+    rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
+    
+    fwhm = (1. / (np.exp(fp22+fw22) - np.exp(fp22-fw22))) / 60.
+    
+    pLoc = (1./np.exp(fp22))/60.
+    
+    #curveM1A.set_ydata(m1_fit)
+    curveM2.set_ydata(m2_fit2)
+    curveM1.set_ydata(m1_fit2)
+    curveLorentz.set_ydata(lorentz)
+    
+    p_index.set_text(r'$n$ = {0:0.2f}'.format(n22))
+    p_amp.set_text(r'$\alpha$ = {0:0.2e}'.format(P22))
+    p_loc.set_text(r'$\beta$ = {0:0.1f} [min]'.format(pLoc))
+    p_wid.set_text(r'$FWHM$ = {0:0.1f} [min]'.format(fwhm))  
+
 
 # Simple mouse click function to store coordinates
 def onclick(event):
@@ -250,74 +323,14 @@ def onclick(event):
         
         s = np.array(spectra[iy][ix])
         
-        # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
-        if spec_unc == 'stddev':
-            ds = np.zeros((spectra.shape[2]))
-            ds[:] = stdDev[iy][ix][:]
-        elif spec_unc == 'adhoc':
-            ds = ds0
-     
-        ## fit data to combined power law plus gaussian component model
-        
-        try:
-            m1_param = Fit(M1, freqs, s, p0=M1_guess, bounds=(M1_low, M1_high), 
-                          sigma=ds, method='dogbox')[0]
-          
-        except RuntimeError: print("Error M1 - curve_fit failed")
-        except ValueError: print("Error M1 - inf/NaN")
-        
-        A, n, C = m1_param  # unpack model parameters
-         
-       
-        try:                                                          
-            m2_param0 = Fit(M2, freqs, s, p0=M2_guess, bounds=(M2_low, M2_high), 
-                           sigma=ds, method='dogbox', max_nfev=3000)[0]
-        
-        except RuntimeError: print("Error M2 - curve_fit failed")
-        except ValueError: print("Error M2 - inf/NaN")
-
-        
-        #A2, n2, C2, P2, fp2, fw2 = m2_param0
-        #print nlfit_gp
-               
-        try:   
-            m2_param = Fit(M2, freqs, s, p0=m2_param0, bounds=(M2_low, M2_high),
-                            sigma=ds, max_nfev=3000)[0]    
-           
-        except RuntimeError: print("Error M2 - curve_fit failed")
-        except ValueError: print("Error M2 - inf/NaN")
-        
-        A22, n22, C22, P22, fp22, fw22 = m2_param     
-        #print m2_param
-                       
-        # create models from parameters    
-        m1_fit = M1(freqs, *m1_param)    
-        lorentz = m2(freqs, P22, fp22, fw22)
-        m2_fit2 = M2(freqs, *m2_param) 
-        m1_fit2 = M1(freqs, A22, n22, C22)      
-        
-        residsM1 = (s - m1_fit)
-        chisqrM1 =  ((residsM1/ds)**2).sum() 
-        
-        residsM22 = (s - m2_fit2)
-        chisqrM22 = ((residsM22/ds)**2).sum()
-        redchisqrM22 = ((residsM22/ds)**2).sum()/float(freqs.size-6) 
-              
-        f_test2 = ((chisqrM1-chisqrM22)/(6-3))/((chisqrM22)/(freqs.size-6))
-        
-        dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
-        p_val = ff.sf(f_test2, dof1, dof2)
-        
-        # extract the lorentzian amplitude scaling factor
-        amp_scale2 = M1(np.exp(fp22), A22, n22, C22)  
-
-        rval = pearsonr(m2_fit2, s)[0]
-        
-        rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
-        
-        fwhm = (1. / (np.exp(fp22+fw22) - np.exp(fp22-fw22))) / 60.
-        
-        pLoc = (1./np.exp(fp22))/60.
+        if specVis_fit == True:
+            # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
+            if spec_unc == 'stddev':
+                ds = np.zeros((spectra.shape[2]))
+                ds[:] = stdDev[iy][ix][:]
+            elif spec_unc == 'adhoc':
+                ds = ds0
+            specFit(s, ds)
         
         # update subplots
         ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
@@ -325,15 +338,6 @@ def onclick(event):
         title.set_text('Spectra Fit: Pixel (%ix , %iy)' % (ix, iy))
         
         curveSpec.set_ydata(s)
-        #curveM1A.set_ydata(m1_fit)
-        curveM2.set_ydata(m2_fit2)
-        curveM1.set_ydata(m1_fit2)
-        curveLorentz.set_ydata(lorentz)
-        
-        p_index.set_text(r'$n$ = {0:0.2f}'.format(n22))
-        p_amp.set_text(r'$\alpha$ = {0:0.2e}'.format(P22))
-        p_loc.set_text(r'$\beta$ = {0:0.1f} [min]'.format(pLoc))
-        p_wid.set_text(r'$FWHM$ = {0:0.1f} [min]'.format(fwhm))
                 
     return ix, iy
 
@@ -350,7 +354,7 @@ plt.rcParams["font.family"] = "Times New Roman"
 fontSize = 15
 
 
-directory = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
+#directory = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
 date = '20120606'
 wavelength = 1600
 
@@ -368,7 +372,8 @@ M2_high = cfg['M2_high']
 spec_unc = cfg['spec_unc']
 M1_guess = cfg['M1_guess']
 M2_guess = cfg['M2_guess']
-#directory = cfg['specVis_dir']
+directory = cfg['specVis_dir']
+specVis_fit = False
 
 global spectra
 
