@@ -20,6 +20,13 @@ import os
 import yaml
 from specModel import M1, M2, m2
 
+import argparse
+parser = argparse.ArgumentParser(description='specVis.py')
+parser.add_argument('--processed_dir', type=str)
+args = parser.parse_args()
+
+processed_dir = args.processed_dir
+
     
 def ax2setup():
     global title, p_index, p_amp, p_loc, p_wid
@@ -354,7 +361,7 @@ plt.rcParams["font.family"] = "Times New Roman"
 fontSize = 15
 
 
-#directory = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
+#processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
 date = '20120606'
 wavelength = 1600
 
@@ -372,24 +379,24 @@ M2_high = cfg['M2_high']
 spec_unc = cfg['spec_unc']
 M1_guess = cfg['M1_guess']
 M2_guess = cfg['M2_guess']
-directory = cfg['specVis_dir']
+#processed_dir = cfg['specVis_dir']
 specVis_fit = False
 
 global spectra
 
 if mmap_spectra == True:
     # load memory-mapped array as read-only
-    spectra = np.load('%s/specCube.npy' % directory, mmap_mode='r')
-    stdDev = np.load('%s/specUnc.npy' % directory, mmap_mode='r')
+    spectra = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
+    stdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
 else:
-    spectra = np.load('%s/specCube.npy' % directory)
-    stdDev = np.load('%s/specUnc.npy' % directory)
+    spectra = np.load('%s/specCube.npy' % processed_dir)
+    stdDev = np.load('%s/specUnc.npy' % processed_dir)
 
-vis = np.load('%s/visual.npy' % directory)
+vis = np.load('%s/visual.npy' % processed_dir)
 
 haveParam = False
-if os.path.isfile('%s/param.npy' % directory):
-    h_map = np.load('%s/param.npy' % directory)
+if os.path.isfile('%s/param.npy' % processed_dir):
+    h_map = np.load('%s/param.npy' % processed_dir)
     haveParam = True
     
 global marker
@@ -405,8 +412,8 @@ global freqs
 
 ### determine frequency values that FFT will evaluate
 ## use frequencies array if exists
-if os.path.isfile('%s/frequencies.npy' % directory):
-    freqs = np.load('%s/frequencies.npy' % directory)
+if os.path.isfile('%s/frequencies.npy' % processed_dir):
+    freqs = np.load('%s/frequencies.npy' % processed_dir)
 else:
     if wavelength in [1600, 1700]:
         time_step = 24
