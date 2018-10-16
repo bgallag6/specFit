@@ -39,19 +39,19 @@ endif
 demo:
 	python preProcessDemo.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
 	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
-	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
-	python paramPlot.py --processed_dir $(processed_dir)
+#	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
+#	python paramPlot.py --processed_dir $(processed_dir)
 	python specVis.py --processed_dir $(processed_dir)
 
 fits:
-	$(PREFIX) python preProcessFITS.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
+	$(PREFIX) python preProcessFITS.py --Nfiles 100 --raw_dir $(raw_dir) --processed_dir $(processed_dir)
 	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
 	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
 	python paramPlot.py
 	python specVis.py
 
 jpg:
-	$(PREFIX) python preProcessJPG.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
+	$(PREFIX) python preProcessJPG.py --Nfiles 100 --raw_dir $(raw_dir) --processed_dir $(processed_dir)
 	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
 	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
 	python paramPlot.py
