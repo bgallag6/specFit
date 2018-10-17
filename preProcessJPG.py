@@ -20,7 +20,6 @@ import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS
 from timeit import default_timer as timer
-import yaml
 #import piexif  # python 2.6+ only?
 import os
 
@@ -40,6 +39,7 @@ args = parser.parse_args()
 
 raw_dir = args.raw_dir
 processed_dir = args.processed_dir
+Nfiles = args.Nfiles
 if not os.path.exists(raw_dir): os.makedirs(raw_dir)
 if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
@@ -73,7 +73,8 @@ def datacube(flist_chunk):
     
     imSample = convertGrayscale(flist_chunk[0])
     vis_avg = np.zeros((imSample.shape[0], imSample.shape[1]))  # for averaged visual image
-    dCube = np.empty((nf1, imSample.shape[0], imSample.shape[1]), dtype=np.int16)
+    #dCube = np.empty((nf1, imSample.shape[0], imSample.shape[1]), dtype=np.int16)
+    dCube = np.empty((imSample.shape[0], imSample.shape[1], nf1), dtype=np.int16)
     
     start = timer()
     T1 = 0
@@ -82,9 +83,11 @@ def datacube(flist_chunk):
 
     # loop through datacube and extract pixel data and time/exposure values
     for filename in flist_chunk:
-        dCube[count] = convertGrayscale(filename)
+        #dCube[count] = convertGrayscale(filename)
+        dCube[:,:,count] = convertGrayscale(filename)
         timestamp[count], exposure[count] = readExif(filename)
-        vis_avg += dCube[count] / exposure[count]  # create normalized average visual image
+        #vis_avg += dCube[count] / exposure[count]  # create normalized average visual image
+        vis_avg += dCube[:,:,count] / exposure[count]  # create normalized average visual image
         count += 1        
         
         # estimate time remaining and print to screen  (looks to be much better - not sure why had above?)
@@ -182,7 +185,8 @@ if rank == 0:
         temp = np.load('%s/chunk_%i_of_%i.npy' % (processed_dir, i+1, size))
         cube_temp.append(temp)
         
-    cube_final = np.vstack(cube_temp)
+    #cube_final = np.vstack(cube_temp)
+    cube_final = np.dstack(cube_temp)
     
     del cube_temp
     

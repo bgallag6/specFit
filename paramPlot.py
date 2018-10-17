@@ -47,16 +47,20 @@ h_map = np.load('%s/param.npy' % processed_dir)
 
 # generate p-value heatmap + masked Lorentzian component heatmaps
 dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
-fstat = np.copy(h_map[6])
+#fstat = np.copy(h_map[6])
+fstat = np.copy(h_map[:,:,6])
 fstat[np.where(np.isnan(fstat))] = 1.
 p_val = ff.sf(fstat, dof1, dof2)
 
 mask_thresh = 0.005  # significance threshold
    
 p_mask = np.copy(p_val)
-amp_mask = np.copy(h_map[3])
-loc_mask = np.copy(h_map[4])
-wid_mask = np.copy(h_map[5])    
+#amp_mask = np.copy(h_map[3])
+#loc_mask = np.copy(h_map[4])
+#wid_mask = np.copy(h_map[5])
+amp_mask = np.copy(h_map[:,:,3])
+loc_mask = np.copy(h_map[:,:,4])
+wid_mask = np.copy(h_map[:,:,5])    
 
 # mask the Lorenztian component arrays with NaNs if above threshold 
 p_mask[p_val > mask_thresh] = np.NaN
@@ -70,29 +74,35 @@ total_pix = p_val.shape[0]*p_val.shape[1]
 mask_percent = ((np.float(count))/total_pix)*100
 
 # convert Lorentzian location to minutes
-h_map[4] = (1./np.exp(h_map[4]))/60.               
+#h_map[4] = (1./np.exp(h_map[4]))/60.
+h_map[:,:,4] = (1./np.exp(h_map[:,:,4]))/60.               
 loc_mask = (1./np.exp(loc_mask))/60.  
 
 plots = [p_mask, amp_mask, loc_mask, wid_mask]
 
-if h_map.shape[2] > h_map.shape[1]:
-    aspect_ratio = float(h_map.shape[2]) / float(h_map.shape[1])
+#if h_map.shape[2] > h_map.shape[1]:
+if h_map.shape[1] > h_map.shape[0]:
+    #aspect_ratio = float(h_map.shape[2]) / float(h_map.shape[1])
+    aspect_ratio = float(h_map.shape[1]) / float(h_map.shape[0])
     fig_height = 10
     fig_width = 10*aspect_ratio
     
 else:
-    aspect_ratio = float(h_map.shape[1]) / float(h_map.shape[2])
+    #aspect_ratio = float(h_map.shape[1]) / float(h_map.shape[2])
+    aspect_ratio = float(h_map.shape[0]) / float(h_map.shape[1])
     fig_width = 10
     fig_height = 10*aspect_ratio
 
 
-for i in range(h_map.shape[0]):
+#for i in range(h_map.shape[0]):
+for i in range(h_map.shape[2]):
     
     fig = plt.figure(figsize=(fig_width,fig_height))
     ax = plt.gca() 
     plt.title(r'%s' % (titles[i]), y = 1.02, fontsize=font_size)
     
-    param = h_map[i]
+    #param = h_map[i]
+    param = h_map[:,:,i]
     
     # specify discrete colorscale with 10 intervals
     if i == 4:
@@ -112,7 +122,8 @@ for i in range(h_map.shape[0]):
     for h in range(11):
         c_ticks[h] = h_min + h_step*h 
         
-    im = ax.imshow(np.flipud(h_map[i]), cmap = cmap, vmin=h_min, vmax=h_max)
+    #im = ax.imshow(np.flipud(h_map[i]), cmap = cmap, vmin=h_min, vmax=h_max)
+    im = ax.imshow(np.flipud(param), cmap = cmap, vmin=h_min, vmax=h_max)
     plt.xticks(fontsize=font_size)
     plt.yticks(fontsize=font_size)
     ax.tick_params(axis='both', which='major', pad=10)
@@ -166,7 +177,8 @@ v_max = np.percentile(vis,99)
 fig = plt.figure(figsize=(fig_width,fig_height))
 ax = plt.gca()
 plt.title('Visual Average', y = 1.02, fontsize=font_size)
-im = ax.imshow(np.flipud(vis), cmap='sdoaia%i' % wavelength, vmin=v_min, vmax=v_max)
+#im = ax.imshow(np.flipud(vis), cmap='sdoaia%i' % wavelength, vmin=v_min, vmax=v_max)
+im = ax.imshow(np.flipud(vis), cmap='sdoaia%i' % 1600, vmin=v_min, vmax=v_max)
 plt.xticks(fontsize=font_size)
 plt.yticks(fontsize=font_size)
 ax.tick_params(axis='both', which='major', pad=10)

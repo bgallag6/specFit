@@ -70,7 +70,8 @@ def datacube(flist_chunk):
     visAvg = np.empty((mapShape[0], mapShape[1]))
     
     # image data is int16
-    dCube = np.empty((nf1, mapShape[0], mapShape[1]), dtype=np.int16)  
+    #dCube = np.empty((nf1, mapShape[0], mapShape[1]), dtype=np.int16)
+    dCube = np.empty((mapShape[0], mapShape[1], nf1), dtype=np.int16)
     
     start = timer()
     T1 = 0
@@ -89,7 +90,8 @@ def datacube(flist_chunk):
             dmap = dmap[:dmap.shape[0]-dimenDiff[0], :dmap.shape[1]-dimenDiff[1]]
             dimCount += 1
         visAvg += (dmap / (smap.exposure_time).value)
-        dCube[count] = dmap
+        #dCube[count] = dmap
+        dCube[:,:,count] = dmap
         count += 1       
         
         # estimate time remaining and print to screen
@@ -110,7 +112,8 @@ def datacube(flist_chunk):
                   (count, nf1, T_hr2, T_min2, T_sec2), flush=True)
         T1 = T
     
-    dCube_trim = dCube[:, diffLatPix:-diffLatPix, xminI:-xminF]
+    #dCube_trim = dCube[:, diffLatPix:-diffLatPix, xminI:-xminF]
+    dCube_trim = dCube[diffLatPix:-diffLatPix, xminI:-xminF]
     visAvg = visAvg[diffLatPix:-diffLatPix, xminI:-xminF]
 
     np.save('%s/chunk_%i_of_%i' % (processed_dir, rank+1, size), dCube_trim)
@@ -251,7 +254,8 @@ if rank == 0:
         temp = np.load('%s/chunk_%i_of_%i.npy' % (processed_dir, i+1, size))
         cube_temp.append(temp)
         
-    cube_final = np.vstack(cube_temp)
+    #cube_final = np.vstack(cube_temp)
+    cube_final = np.dstack(cube_temp)
     
     del cube_temp
     

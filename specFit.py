@@ -54,7 +54,8 @@ M2_guess = cfg['M2_guess']
 
 def specFit( subcube, subcube_StdDev ):
         
-  params = np.zeros((11, subcube.shape[0], subcube.shape[1]))
+  #params = np.zeros((11, subcube.shape[0], subcube.shape[1]))
+  params = np.zeros((subcube.shape[0], subcube.shape[1], 11))
   
   start = timer()
   T1 = 0
@@ -129,6 +130,7 @@ def specFit( subcube, subcube_StdDev ):
             else:
                 rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
             
+            """
             # populate array with M2 parameters
             params[0][l][m] = A22
             params[1][l][m] = n22
@@ -141,6 +143,19 @@ def specFit( subcube, subcube_StdDev ):
             params[8][l][m] = rval
             params[9][l][m] = rollover
             params[10][l][m] = redchisqrM22
+            """
+            
+            params[l][m][0] = A22
+            params[l][m][1] = n22
+            params[l][m][2] = C22
+            params[l][m][3] = P22
+            params[l][m][4] = fp22
+            params[l][m][5] = fw22
+            params[l][m][6] = f_test2
+            params[l][m][7] = amp_scale2
+            params[l][m][8] = rval
+            params[l][m][9] = rollover
+            params[l][m][10] = redchisqrM22
             
         else:
             rval = pearsonr(m1_fit, s)[0]
@@ -149,6 +164,7 @@ def specFit( subcube, subcube_StdDev ):
             else:
                 rollover = (1. / ((C / A)**(-1. / n))) / 60.
             
+            """
             # populate array with M1 parameters
             params[0][l][m] = A
             params[1][l][m] = n
@@ -161,6 +177,19 @@ def specFit( subcube, subcube_StdDev ):
             params[8][l][m] = rval
             params[9][l][m] = rollover
             params[10][l][m] = redchisqrM1
+            """
+            
+            params[l][m][0] = A
+            params[l][m][1] = n
+            params[l][m][2] = C
+            params[l][m][3] = np.NaN
+            params[l][m][4] = np.NaN
+            params[l][m][5] = np.NaN
+            params[l][m][6] = np.NaN
+            params[l][m][7] = np.NaN
+            params[l][m][8] = rval
+            params[l][m][9] = rollover
+            params[l][m][10] = redchisqrM1
         
         
     # estimate time remaining and print to screen
@@ -232,6 +261,7 @@ df2[0:len(df)] = df
 df2[len(df2)-1] = df2[len(df2)-2]
 ds = df2
 
+"""
 # specify which chunks should be handled by each processor
 for i in range(size):
     if rank == i:
@@ -240,6 +270,14 @@ for i in range(size):
             subcube_StdDev = chunks_StdDev[i]
         elif spec_unc == 'adhoc':
             subcube_StdDev = ds
+"""
+            
+subcube = chunks[rank]
+
+if spec_unc == 'stddev':
+    subcube_StdDev = chunks_StdDev[rank]
+elif spec_unc == 'adhoc':
+    subcube_StdDev = ds
 
 # verify each processor received subcube with correct dimensions
 ss = np.shape(subcube)
@@ -254,7 +292,8 @@ if havempi:
 # Have one node stack the results
 if rank == 0:
     if havempi:
-        stack_p = np.hstack(newData_p)
+        #stack_p = np.hstack(newData_p)
+        stack_p = np.vstack(newData_p)
     else:
         stack_p = params_T
     print(stack_p.shape, flush=True)  # Verify dimensions match input cube

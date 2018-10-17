@@ -59,8 +59,10 @@ def fftAvg(subcube):
     
     #from scipy import fftpack
     
-    timeseries = np.empty(subcube.shape[0])
-    spectra_seg = np.zeros((subcube.shape[1],subcube.shape[2],len(freqs)))
+    #timeseries = np.empty(subcube.shape[0])
+    #spectra_seg = np.zeros((subcube.shape[1],subcube.shape[2],len(freqs)))
+    timeseries = np.empty(subcube.shape[2])
+    spectra_seg = np.zeros((subcube.shape[0],subcube.shape[1],len(freqs)))
     
     start_sub = timer()
     T1 = 0    
@@ -69,7 +71,8 @@ def fftAvg(subcube):
         for jj in range(spectra_seg.shape[1]):        
             
             # extract timeseries + normalize by exposure time
-            timeseries = subcube[:,ii,jj] / exposure     
+            #timeseries = subcube[:,ii,jj] / exposure
+            timeseries = subcube[ii,jj] / exposure
             
             # interpolate pixel-intensity values onto specified time grid
             v_interp = np.interp(t_interp, timestamp, timeseries)  
@@ -154,18 +157,23 @@ timestamp = np.load('%s/timestamps.npy' % processed_dir)
 exposure = np.load('%s/exposures.npy' % processed_dir)
 
 ## trim top/bottom rows of cube so it divides cleanly by the # of processors
-trim_top = int(np.floor((cube.shape[1] % size) / 2))
-trim_bot = -int(np.ceil((cube.shape[1] % size) / 2))
+#trim_top = int(np.floor((cube.shape[1] % size) / 2))
+#trim_bot = -int(np.ceil((cube.shape[1] % size) / 2))
+trim_top = int(np.floor((cube.shape[0] % size) / 2))
+trim_bot = -int(np.ceil((cube.shape[0] % size) / 2))
 
 if trim_top == trim_bot == 0:
-    chunks = np.array_split(cube, size, axis=1)  # Split based on # processors
+    #chunks = np.array_split(cube, size, axis=1)  # Split based on # processors
+    chunks = np.array_split(cube, size, axis=0)  # Split based on # processors
 else:
-    chunks = np.array_split(cube[:,trim_top:trim_bot], size, axis=1)
+    #chunks = np.array_split(cube[:,trim_top:trim_bot], size, axis=1)
+    chunks = np.array_split(cube[trim_top:trim_bot], size, axis=0)
 
 # specify which chunks should be handled by each processor
-for i in range(size):
-    if rank == i:
-        subcube = chunks[i]
+#for i in range(size):
+#    if rank == i:
+#        subcube = chunks[i]
+subcube = chunks[rank]
 
 if type(tStep) == float:
     timeStep = tStep
@@ -201,8 +209,10 @@ if havempi:
     
     # allocate receive buffer  
     if rank == 0:
-        spectra_seg = np.empty((cube.shape[1]-(trim_top-trim_bot), cube.shape[2], 
-                                len(freqs)), dtype='float64')  
+        #spectra_seg = np.empty((cube.shape[1]-(trim_top-trim_bot), cube.shape[2], 
+        #                        len(freqs)), dtype='float64')
+        spectra_seg = np.empty((cube.shape[0]-(trim_top-trim_bot), cube.shape[1], 
+                                len(freqs)), dtype='float64')
     
     # Gather all the results
     comm.Gather(sendbuf=spectra_seg_part, recvbuf=spectra_seg, root=0)

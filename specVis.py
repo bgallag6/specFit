@@ -75,7 +75,8 @@ def plotMap(p):
     global im
     cbar1.remove()
     im.remove()
-    param = h_map[p]
+    #param = h_map[p]
+    param = h_map[:,:,p]
     pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
     pNaN = pflat[~np.isnan(pflat)]
     h_min = np.percentile(pNaN,1)
@@ -97,7 +98,8 @@ def plotMask(p):
     cbar1.remove()
     im.remove()  
     
-    param = h_map[p]
+    #param = h_map[p]
+    param = h_map[:,:,p]
     pflat = np.reshape(param, (param.shape[0]*param.shape[1]))
     pNaN = pflat[~np.isnan(pflat)]
     h_min = np.percentile(pNaN,1)
@@ -105,7 +107,8 @@ def plotMask(p):
     
     # generate p-value heatmap + masked Lorentzian component heatmaps
     dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
-    p_val = ff.sf(h_map[6], dof1, dof2)
+    #p_val = ff.sf(h_map[6], dof1, dof2)
+    p_val = ff.sf(h_map[:,:,6], dof1, dof2)
     param_mask = np.copy(param) 
     param_mask[p_val > mask_val] = np.NaN
     
@@ -127,11 +130,13 @@ def plotMask(p):
         
 def histMask(p):
     global mask_val
-    param = h_map[p]
+    #param = h_map[p]
+    param = h_map[:,:,p]
     
     # generate p-value heatmap + masked Lorentzian component heatmaps
     dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
-    p_val = ff.sf(h_map[6], dof1, dof2)
+    #p_val = ff.sf(h_map[6], dof1, dof2)
+    p_val = ff.sf(h_map[:,:,6], dof1, dof2)
     param_mask = np.copy(param) 
     param_mask[p_val > mask_val] = 0.
     param1d = np.reshape(param_mask, (param_mask.shape[0]*param_mask.shape[1]))
@@ -206,7 +211,8 @@ class Index(object):
         ax2.clear()
         if toggle2 == 0:
             ax2.set_title('Histogram: %s' % titles[marker], y = 1.01, fontsize=17)
-            pflat = np.reshape(h_map[marker], (h_map[marker].shape[0]*h_map[marker].shape[1]))
+            #pflat = np.reshape(h_map[marker], (h_map[marker].shape[0]*h_map[marker].shape[1]))
+            pflat = np.reshape(h_map[:,:,marker], (h_map[:,:,marker].shape[0]*h_map[:,:,marker].shape[1]))
             pNaN = pflat[~np.isnan(pflat)]
             ax2.hist(pNaN, bins=25, edgecolor='black')
         elif toggle2 == 1:
@@ -333,8 +339,9 @@ def onclick(event):
         if specVis_fit == True:
             # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
             if spec_unc == 'stddev':
-                ds = np.zeros((spectra.shape[2]))
-                ds[:] = stdDev[iy][ix][:]
+                #ds = np.zeros((spectra.shape[2]))
+                #ds[:] = stdDev[iy][ix][:]
+                ds = np.array(stdDev[iy][ix])
             elif spec_unc == 'adhoc':
                 ds = ds0
             specFit(s, ds)
@@ -346,7 +353,7 @@ def onclick(event):
         
         curveSpec.set_ydata(s)
                 
-    return ix, iy
+        #return ix, iy
 
     
 
@@ -361,7 +368,7 @@ plt.rcParams["font.family"] = "Times New Roman"
 fontSize = 15
 
 
-#processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
+processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
 date = '20120606'
 wavelength = 1600
 
@@ -450,8 +457,10 @@ ax1 = plt.subplot2grid((30,31),(4, 1), colspan=14, rowspan=25)
 if haveParam:
     ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[1]), 
                   y = 1.01, fontsize=17)
-    h_map[4] = (1./(np.exp(h_map[4]))/60.)
-    param = h_map[1] 
+    #h_map[4] = (1./(np.exp(h_map[4]))/60.)
+    h_map[:,:,4] = (1./(np.exp(h_map[:,:,4]))/60.)
+    #param = h_map[1] 
+    param = h_map[:,:,1] 
     h_min = np.percentile(param,1) 
     h_max = np.percentile(param,99)
     im, = ([ax1.imshow(param, cmap='jet', interpolation='nearest', vmin=h_min, 
