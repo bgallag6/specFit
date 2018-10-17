@@ -31,7 +31,7 @@ T = float(N)
 for i in range(0,N):
     arr = imarray
     t = float(i)
-    tmp = np.sin(25.*2*np.pi*t/T)+np.sin(50.*2*np.pi*t/T)+np.sin(100.*2*np.pi*t/T)
+    tmp = np.sin(8.*2*np.pi*t/T)+np.sin(32.*2*np.pi*t/T)+np.sin(64.*2*np.pi*t/T)
     arr[:,:] = np.uint8( 255.0*(tmp/3.+1.)/2. )
     im = Image.fromarray(arr)
     im.save(os.path.join(raw_dir,prefix+'-%03d.tiff' % i))
