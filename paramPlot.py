@@ -169,7 +169,7 @@ for i in range(h_map.shape[2]):
 
 # generate visual images
 vis = np.load('%s/visual.npy' % processed_dir)  
-vis = vis[1:-1,1:-1]  # make same size as heatmaps (if using 3x3 averaging)
+#vis = vis[1:-1,1:-1]  # make same size as heatmaps (if using 3x3 averaging)
           
 v_min = np.percentile(vis,1)
 v_max = np.percentile(vis,99) 

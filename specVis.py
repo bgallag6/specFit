@@ -324,36 +324,37 @@ def specFit(s, ds):
 def onclick(event):
     global ix, iy
     ixx, iyy = event.xdata, event.ydata
-    if ixx > 1. and iyy > 1.:
-        ax2.clear()
-        del ax1.collections[:]
-        plt.draw()
-        ax2setup()
-        
-        print("pixel: (%ix, %iy)" % (ixx, iyy))
-        ix = int(ixx)
-        iy = int(iyy)
-        
-        s = np.array(spectra[iy][ix])
-        
-        if specVis_fit == True:
-            # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
-            if spec_unc == 'stddev':
-                #ds = np.zeros((spectra.shape[2]))
-                #ds[:] = stdDev[iy][ix][:]
-                ds = np.array(stdDev[iy][ix])
-            elif spec_unc == 'adhoc':
-                ds = ds0
-            specFit(s, ds)
-        
-        # update subplots
-        ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
-        
-        title.set_text('Spectra Fit: Pixel (%ix , %iy)' % (ix, iy))
-        
-        curveSpec.set_ydata(s)
-                
-        #return ix, iy
+    if ixx: 
+        if ixx > 1. and iyy > 1.:
+            ax2.clear()
+            del ax1.collections[:]
+            plt.draw()
+            ax2setup()
+            
+            print("pixel: (%ix, %iy)" % (ixx, iyy))
+            ix = int(ixx)
+            iy = int(iyy)
+            
+            s = np.array(spectra[iy][ix])
+            
+            if specVis_fit == True:
+                # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
+                if spec_unc == 'stddev':
+                    #ds = np.zeros((spectra.shape[2]))
+                    #ds[:] = stdDev[iy][ix][:]
+                    ds = np.array(stdDev[iy][ix])
+                elif spec_unc == 'adhoc':
+                    ds = ds0
+                specFit(s, ds)
+            
+            # update subplots
+            ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
+            
+            title.set_text('Spectra Fit: Pixel (%ix , %iy)' % (ix, iy))
+            
+            curveSpec.set_ydata(s)
+                    
+            #return ix, iy
 
     
 
@@ -368,7 +369,7 @@ plt.rcParams["font.family"] = "Times New Roman"
 fontSize = 15
 
 
-processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
+#processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
 date = '20120606'
 wavelength = 1600
 
@@ -398,7 +399,7 @@ if mmap_spectra == True:
 else:
     spectra = np.load('%s/specCube.npy' % processed_dir)
     stdDev = np.load('%s/specUnc.npy' % processed_dir)
-
+ 
 vis = np.load('%s/visual.npy' % processed_dir)
 
 haveParam = False
@@ -514,8 +515,10 @@ else:
     im, = ([ax1.imshow(param, cmap='sdoaia1600', interpolation='nearest', 
                        vmin=h_min, vmax=h_max, picker=True)])
  
-ax1.set_xlim(0, param.shape[1]-1)
-ax1.set_ylim(0, param.shape[0]-1)    
+#ax1.set_xlim(0, param.shape[1]-1)
+#ax1.set_ylim(0, param.shape[0]-1)
+ax1.set_xlim(0, param.shape[1]-0.5)
+ax1.set_ylim(0, param.shape[0]-0.5)     
 
 # design colorbar for heatmaps
 global cbar1
