@@ -38,7 +38,8 @@ for i in range(0,N):
 
 ###########################################################################
 # Read images
-cube = np.zeros((N,Nx,Ny), dtype=np.uint8)
+#cube = np.zeros((N,Nx,Ny), dtype=np.uint8)
+cube = np.zeros((Nx,Ny,N), dtype=np.uint8)
 
 timestamps = []
 exposures = []
@@ -50,9 +51,11 @@ for i in range(0,N):
     exposures.append(1.0)
 
     im = Image.open(os.path.join(raw_dir,prefix+'-%03d.tiff' % i))
-    cube[i,:,:] = np.asarray(im)
+    #cube[i,:,:] = np.asarray(im)
+    cube[:,:,i] = np.asarray(im)
 
-cube_avg = np.uint8(np.average(cube,axis=0))
+#cube_avg = np.uint8(np.average(cube,axis=0))
+cube_avg = np.uint8(np.average(cube,axis=2))
 
 ###########################################################################
 # Save info for specFit processing
