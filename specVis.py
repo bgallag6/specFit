@@ -22,7 +22,7 @@ from specModel import M1, M2, m2
 
 import argparse
 parser = argparse.ArgumentParser(description='specVis.py')
-parser.add_argument('--processed_dir', type=str)
+parser.add_argument('--processed_dir', type=str, default='images/processed/demo')
 args = parser.parse_args()
 
 processed_dir = args.processed_dir
@@ -31,7 +31,7 @@ processed_dir = args.processed_dir
 def ax2setup():
     global title, p_index, p_amp, p_loc, p_wid
     global curveSpec, curveM2, curveM1, curveLorentz
-    title, = ([ax2.set_title('Spectra Fit: Pixel ( , )', fontsize=fontSize)])
+    title, = ([ax2.set_title('Pixel ( , )', fontsize=fontSize)])
     ax2.set_xlabel('Frequency [Hz]', fontsize=fontSize, labelpad=5)
     ax2.set_ylabel('Power', fontsize=fontSize, labelpad=5)
     ax2.set_ylim(ylow, yhigh)
@@ -39,20 +39,20 @@ def ax2setup():
     
     curveSpec, = ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
     #curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
-    curveM2, = ax2.loglog(freqs, emptyLine, c='purple', lw=1.5, label='M2')
-    curveM1, = ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
-    curveLorentz, = ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentz')
-    ax2.axvline(x=(1./300.), color='k', ls='dashed', label='5 minutes')
-    ax2.axvline(x=(1./180.), color='k', ls='dotted', label='3 minutes')
-    
-    legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)   
-    for label in legend.get_lines():
-            label.set_linewidth(2.0)  # the legend line width
+    if haveParam:
+        curveM2, = ax2.loglog(freqs, emptyLine, c='purple', lw=1.5, label='M2')
+        curveM1, = ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
+        curveLorentz, = ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentz')
+        #ax2.axvline(x=(1./300.), color='k', ls='dashed', label='5 minutes')
+        #ax2.axvline(x=(1./180.), color='k', ls='dotted', label='3 minutes')    
+        legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)   
+        for label in legend.get_lines():
+                label.set_linewidth(2.0)  # the legend line width
             
-    p_index, = ([ax2.text(0.010, 10**-0.5, '', fontsize=fontSize)])
-    p_amp, = ([ax2.text(0.010, 10**-0.75, '', fontsize=fontSize)])
-    p_loc, = ([ax2.text(0.010, 10**-1.00, '', fontsize=fontSize)])
-    p_wid, = ([ax2.text(0.00635, 10**-1.25, '', fontsize=fontSize)])
+        p_index, = ([ax2.text(0.010, 10**-0.5, '', fontsize=fontSize)])
+        p_amp, = ([ax2.text(0.010, 10**-0.75, '', fontsize=fontSize)])
+        p_loc, = ([ax2.text(0.010, 10**-1.00, '', fontsize=fontSize)])
+        p_wid, = ([ax2.text(0.00635, 10**-1.25, '', fontsize=fontSize)])
     
 def update(val):
     global mask_val
@@ -123,8 +123,7 @@ def plotMask(p):
         c_map = 'jet'
     im = ax1.imshow(param_mask, cmap=c_map, interpolation='nearest', 
                     vmin=h_min, vmax=h_max, picker=True)
-    ax1.set_title(r'%s: %i $\AA$ | %s | $f_{masked}$ = %0.1f%s' % 
-                  (date_title, wavelength, titles[p], mask_percent, '%'), 
+    ax1.set_title(r'$f_{masked}$ = %0.1f%s' % (titles[p], mask_percent, '%'), 
                   y=1.01, fontsize=17)
     colorBar()
         
@@ -199,10 +198,9 @@ class Index(object):
         param = vis
         h_min = np.percentile(param,1)
         h_max = np.percentile(param,99)
-        im = ax1.imshow(param, cmap='sdoaia%i' % wavelength, interpolation='nearest', 
+        im = ax1.imshow(param, cmap='sdoaia1600', interpolation='nearest', 
                         vmin=h_min, vmax=h_max, picker=True)
-        ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[7]), 
-                      y = 1.01, fontsize=17)
+        ax1.set_title(r'%s' % titles[7], y = 1.01, fontsize=17)
         colorBar()
     
     def hist(self, event):
@@ -350,7 +348,7 @@ def onclick(event):
             # update subplots
             ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
             
-            title.set_text('Spectra Fit: Pixel (%ix , %iy)' % (ix, iy))
+            title.set_text('Pixel (%ix , %iy)' % (ix, iy))
             
             curveSpec.set_ydata(s)
                     
@@ -366,19 +364,12 @@ def onclick(event):
 print("Starting specVis...", flush=True)
 
 plt.rcParams["font.family"] = "Times New Roman"
+plt.rcParams["font.size"] = 15
 fontSize = 15
-
-
-#processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
-date = '20120606'
-wavelength = 1600
 
 with open('specFit_config.yaml', 'r') as stream:
     cfg = yaml.load(stream)
 
-#directory = cfg['temp_dir']
-#date = cfg['date']
-#wavelength = cfg['wavelength']
 mmap_spectra = cfg['mmap_spectra']
 M1_low = cfg['M1_low']
 M1_high = cfg['M1_high']
@@ -422,12 +413,7 @@ global freqs
 ## use frequencies array if exists
 if os.path.isfile('%s/frequencies.npy' % processed_dir):
     freqs = np.load('%s/frequencies.npy' % processed_dir)
-else:
-    if wavelength in [1600, 1700]:
-        time_step = 24
-    else:
-        time_step = 12
-    
+else:    
     freq_size = (spectra.shape[2]*2)+1
     sample_freq = fftpack.fftfreq(freq_size, d=time_step)
     pidxs = np.where(sample_freq > 0)    
@@ -456,8 +442,7 @@ ax1 = plt.gca()
 ax1 = plt.subplot2grid((30,31),(4, 1), colspan=14, rowspan=25)
 
 if haveParam:
-    ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[1]), 
-                  y = 1.01, fontsize=17)
+    ax1.set_title(r'%s' % titles[1], y = 1.01, fontsize=17)
     #h_map[4] = (1./(np.exp(h_map[4]))/60.)
     h_map[:,:,4] = (1./(np.exp(h_map[:,:,4]))/60.)
     #param = h_map[1] 
@@ -507,8 +492,7 @@ if haveParam:
     slid_mask.on_changed(update)
     
 else:
-    ax1.set_title(r'%s: %i $\AA$ | Visual Average' % (date_title, wavelength), 
-                  y = 1.01, fontsize=17)
+    ax1.set_title(r'Visual Average', y = 1.01, fontsize=17)
     param = vis
     h_min = np.percentile(param,1) 
     h_max = np.percentile(param,99)
