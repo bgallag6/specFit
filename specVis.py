@@ -354,6 +354,16 @@ def onclick(event):
                     
             #return ix, iy
 
+
+def labels2int(labels):
+    '''Remove tick labels with fraction.'''
+    newlabels = []
+    for i in range(0,len(labels)):
+        if int(labels[i]) != labels[i]:
+            newlabels.append('')
+        else:
+            newlabels.append(str(int(labels[i])))
+    return newlabels
     
 
 """
@@ -494,15 +504,29 @@ if haveParam:
 else:
     ax1.set_title(r'Visual Average', y = 1.01, fontsize=17)
     param = vis
-    h_min = np.percentile(param,1) 
-    h_max = np.percentile(param,99)
-    im, = ([ax1.imshow(param, cmap='sdoaia1600', interpolation='nearest', 
+    #h_min = np.percentile(param,1) 
+    #h_max = np.percentile(param,99)
+
+    h_min = 0
+    h_max = 127
+
+    print(param)
+    param[0,0] = 10
+    param[0,1] = 20
+    param[0,2] = 30
+    print(param)
+
+    im, = ([ax1.imshow(param, cmap=plt.get_cmap('viridis', 32), 
                        vmin=h_min, vmax=h_max, picker=True)])
- 
+
+    ax1.set_xticklabels(labels2int(ax1.get_xticks()))
+    ax1.set_yticklabels(labels2int(ax1.get_yticks()))
+    
+    
 #ax1.set_xlim(0, param.shape[1]-1)
 #ax1.set_ylim(0, param.shape[0]-1)
-ax1.set_xlim(0, param.shape[1]-0.5)
-ax1.set_ylim(0, param.shape[0]-0.5)     
+#ax1.set_xlim(0, param.shape[1]+0.5)
+#ax1.set_ylim(0, param.shape[0]+0.5)     
 
 # design colorbar for heatmaps
 global cbar1
