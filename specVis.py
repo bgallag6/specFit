@@ -28,32 +28,6 @@ args = parser.parse_args()
 processed_dir = args.processed_dir
 
     
-def ax2setup():
-    global title, p_index, p_amp, p_loc, p_wid
-    global curveSpec, curveM2, curveM1, curveLorentz
-    title, = ([ax2.set_title('Pixel ( , )', fontsize=fontSize)])
-    ax2.set_xlabel('Frequency [Hz]', fontsize=fontSize, labelpad=5)
-    ax2.set_ylabel('Power', fontsize=fontSize, labelpad=5)
-    ax2.set_ylim(ylow, yhigh)
-    ax2.set_xlim(xlow, xhigh) 
-    
-    curveSpec, = ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
-    #curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
-    if haveParam:
-        curveM2, = ax2.loglog(freqs, emptyLine, c='purple', lw=1.5, label='M2')
-        curveM1, = ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
-        curveLorentz, = ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentz')
-        #ax2.axvline(x=(1./300.), color='k', ls='dashed', label='5 minutes')
-        #ax2.axvline(x=(1./180.), color='k', ls='dotted', label='3 minutes')    
-        legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)   
-        for label in legend.get_lines():
-                label.set_linewidth(2.0)  # the legend line width
-            
-        p_index, = ([ax2.text(0.010, 10**-0.5, '', fontsize=fontSize)])
-        p_amp, = ([ax2.text(0.010, 10**-0.75, '', fontsize=fontSize)])
-        p_loc, = ([ax2.text(0.010, 10**-1.00, '', fontsize=fontSize)])
-        p_wid, = ([ax2.text(0.00635, 10**-1.25, '', fontsize=fontSize)])
-    
 def update(val):
     global mask_val
     mask_val = slid_mask.val
@@ -87,8 +61,7 @@ def plotMap(p):
         c_map = 'jet'
     im = ax1.imshow(param, cmap=c_map, interpolation='nearest', vmin=h_min, 
                     vmax=h_max, picker=True)
-    ax1.set_title(r'%s: %i $\AA$ | %s' % (date_title, wavelength, titles[p]), 
-                  y = 1.01, fontsize=17)
+    ax1.set_title(r'%s' % titles[p], y = 1.01, fontsize=17)
     colorBar()
     
 def plotMask(p):
@@ -123,7 +96,7 @@ def plotMask(p):
         c_map = 'jet'
     im = ax1.imshow(param_mask, cmap=c_map, interpolation='nearest', 
                     vmin=h_min, vmax=h_max, picker=True)
-    ax1.set_title(r'$f_{masked}$ = %0.1f%s' % (titles[p], mask_percent, '%'), 
+    ax1.set_title(r'%s | $f_{masked}$ = %0.1f%s' % (titles[p], mask_percent, '%'), 
                   y=1.01, fontsize=17)
     colorBar()
         
@@ -322,13 +295,11 @@ def specFit(s, ds):
 def onclick(event):
     global ix, iy
     ixx, iyy = event.xdata, event.ydata
-    print(ixx,iyy)
+    #print(ixx,iyy)
 #    if ixx: 
 #        if ixx > 1. and iyy > 1.:
-    ax2.clear()
     del ax1.collections[:]
     plt.draw()
-    ax2setup()
     
     print("location: (%ix, %iy)" % (ixx, iyy))
     ix = int(round(ixx))
@@ -339,8 +310,6 @@ def onclick(event):
     if specVis_fit == True:
         # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
         if spec_unc == 'stddev':
-            #ds = np.zeros((spectra.shape[2]))
-            #ds[:] = stdDev[iy][ix][:]
             ds = np.array(stdDev[iy][ix])
         elif spec_unc == 'adhoc':
             ds = ds0
@@ -352,8 +321,11 @@ def onclick(event):
     title.set_text('Pixel (%ix , %iy)' % (ix, iy))
     
     curveSpec.set_ydata(s)
-                    
-            #return ix, iy
+    
+    timeseries = np.array(imCube[iy+1][ix+1] / exposures)
+  
+    ts.set_ydata(timeseries)  
+    ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1)             
 
 
 def labels2int(labels):
@@ -372,10 +344,12 @@ def labels2int(labels):
 ##############################################################################
 """
 
+#processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
+
 print("Starting specVis...", flush=True)
 
 plt.rcParams["font.family"] = "Times New Roman"
-plt.rcParams["font.size"] = 15
+#plt.rcParams["font.size"] = 15
 fontSize = 15
 
 with open('specFit_config.yaml', 'r') as stream:
@@ -398,11 +372,16 @@ if mmap_spectra == True:
     # load memory-mapped array as read-only
     spectra = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
     stdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
+    imCube = np.load('%s/dataCube.npy' % processed_dir, mmap_mode='r')
 else:
     spectra = np.load('%s/specCube.npy' % processed_dir)
     stdDev = np.load('%s/specUnc.npy' % processed_dir)
+    imCube = np.load('%s/dataCube.npy' % processed_dir)
  
 vis = np.load('%s/visual.npy' % processed_dir)
+
+timestamps = np.load('%s/timestamps.npy' % processed_dir)
+exposures = np.load('%s/exposures.npy' % processed_dir)
 
 haveParam = False
 if os.path.isfile('%s/param.npy' % processed_dir):
@@ -443,14 +422,14 @@ ds0 = df2
 titles = ['Power Law Slope Coeff.', 'Power Law Index', 'Tail', 
           'Lorentzian Amplitude', 'Lorentzian Location [min]', 
           'Lorentzian Width', 'F-Statistic', 'Averaged Visual Image']
-date_title = '%i-%02i-%02i' % (int(date[0:4]),int(date[4:6]),int(date[6:8]))
+#date_title = '%i-%02i-%02i' % (int(date[0:4]),int(date[4:6]),int(date[6:8]))
 
 
 # create figure with heatmap and spectra side-by-side subplots
 fig1 = plt.figure(figsize=(18,9))
 
 ax1 = plt.gca()
-ax1 = plt.subplot2grid((30,31),(4, 1), colspan=14, rowspan=25)
+ax1 = plt.subplot2grid((30,31),(4, 1), colspan=14, rowspan=16)
 
 if haveParam:
     ax1.set_title(r'%s' % titles[1], y = 1.01, fontsize=17)
@@ -524,10 +503,8 @@ else:
     ax1.set_yticklabels(labels2int(ax1.get_yticks()))
     
     
-#ax1.set_xlim(0, param.shape[1]-1)
-#ax1.set_ylim(0, param.shape[0]-1)
-#ax1.set_xlim(0, param.shape[1]+0.5)
-#ax1.set_ylim(0, param.shape[0]+0.5)     
+ax1.set_xlim(0, param.shape[1]-0.5)
+ax1.set_ylim(0, param.shape[0]-0.5)     
 
 # design colorbar for heatmaps
 global cbar1
@@ -548,7 +525,7 @@ fig1.canvas.mpl_connect('button_press_event', onclick)
 
 
 # set up spectra subplot
-ax2 = plt.subplot2grid((30,31),(4, 17), colspan=13, rowspan=24)
+ax2 = plt.subplot2grid((30,31),(4, 17), colspan=13, rowspan=16)
 
 xspan = np.log10(freqs[-1]) - np.log10(freqs[0])
 xlow = 10**(np.log10(freqs[0]) - (xspan/10))
@@ -560,7 +537,43 @@ yhigh = 10**(np.log10(np.percentile(spectra, 99.9)) + (yspan/10))
 
 emptyLine = [0 for i in range(len(freqs))]
 
-ax2setup()
+title, = ([ax2.set_title('Pixel ( , )', fontsize=fontSize)])
+ax2.set_xlabel('Frequency [Hz]', fontsize=fontSize, labelpad=5)
+ax2.set_ylabel('Power', fontsize=fontSize, labelpad=5)
+ax2.set_ylim(ylow, yhigh)
+ax2.set_xlim(xlow, xhigh) 
+
+curveSpec, = ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
+#curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
+if specVis_fit:
+    curveM2, = ax2.loglog(freqs, emptyLine, c='purple', lw=1.5, label='M2')
+    curveM1, = ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
+    curveLorentz, = ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentz')
+    #ax2.axvline(x=(1./300.), color='k', ls='dashed', label='5 minutes')
+    #ax2.axvline(x=(1./180.), color='k', ls='dotted', label='3 minutes')    
+    legend = ax2.legend(loc='lower left', prop={'size':15}, labelspacing=0.35)   
+    for label in legend.get_lines():
+            label.set_linewidth(2.0)  # the legend line width
+        
+    p_index, = ([ax2.text(0.010, 10**-0.5, '', fontsize=fontSize)])
+    p_amp, = ([ax2.text(0.010, 10**-0.75, '', fontsize=fontSize)])
+    p_loc, = ([ax2.text(0.010, 10**-1.00, '', fontsize=fontSize)])
+    p_wid, = ([ax2.text(0.00635, 10**-1.25, '', fontsize=fontSize)])
+
+#ax2setup()
+
+t_range = timestamps[-1]-timestamps[0]
+
+ax3 = plt.subplot2grid((30,31),(21, 1), colspan=29, rowspan=8)
+ax3.set_title('Timeseries', fontsize=fontSize)
+ax3.set_xlabel('Time [sec]', fontsize=fontSize, labelpad=5)
+ax3.set_ylabel('Intensity', fontsize=fontSize, labelpad=5)
+ax3.set_xlim(timestamps[0]-0.01*t_range, timestamps[-1]+0.01*t_range) 
+ax3.set_ylim(0,1)
+
+emptyLine2 = [-1 for i in range(len(timestamps))]
+
+ts, = ax3.plot(timestamps, emptyLine2, 'k')
 
 plt.tight_layout()
 
