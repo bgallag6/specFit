@@ -295,37 +295,36 @@ def specFit(s, ds):
 def onclick(event):
     global ix, iy
     ixx, iyy = event.xdata, event.ydata
-    #print(ixx,iyy)
-#    if ixx: 
-#        if ixx > 1. and iyy > 1.:
-    del ax1.collections[:]
-    plt.draw()
     
-    print("location: (%ix, %iy)" % (ixx, iyy))
-    ix = int(round(ixx))
-    iy = int(round(iyy))
-    
-    s = np.array(spectra[iy][ix])
-    
-    if specVis_fit == True:
-        # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
-        if spec_unc == 'stddev':
-            ds = np.array(stdDev[iy][ix])
-        elif spec_unc == 'adhoc':
-            ds = ds0
-        specFit(s, ds)
-    
-    # update subplots
-    ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
-    
-    title.set_text('Pixel (%ix , %iy)' % (ix, iy))
-    
-    curveSpec.set_ydata(s)
-    
-    timeseries = np.array(imCube[iy+1][ix+1] / exposures)
-  
-    ts.set_ydata(timeseries)  
-    ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1)             
+    if event.inaxes == ax1:
+        del ax1.collections[:]
+        plt.draw()
+        
+        print("location: (%ix, %iy)" % (ixx, iyy))
+        ix = int(round(ixx))
+        iy = int(round(iyy))
+        
+        s = np.array(spectra[iy][ix])
+        
+        if specVis_fit == True:
+            # use 3x3 pixel-box std.dev. or adhoc method for fitting uncertainties
+            if spec_unc == 'stddev':
+                ds = np.array(stdDev[iy][ix])
+            elif spec_unc == 'adhoc':
+                ds = ds0
+            specFit(s, ds)
+        
+        # update subplots
+        ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
+        
+        title.set_text('Pixel (%ix , %iy)' % (ix, iy))
+        
+        curveSpec.set_ydata(s)
+        
+        timeseries = np.array(imCube[iy+1][ix+1] / exposures)
+          
+        ts.set_ydata(timeseries)  
+        ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1)             
 
 
 def labels2int(labels):
@@ -559,8 +558,6 @@ if specVis_fit:
     p_amp, = ([ax2.text(0.010, 10**-0.75, '', fontsize=fontSize)])
     p_loc, = ([ax2.text(0.010, 10**-1.00, '', fontsize=fontSize)])
     p_wid, = ([ax2.text(0.00635, 10**-1.25, '', fontsize=fontSize)])
-
-#ax2setup()
 
 t_range = timestamps[-1]-timestamps[0]
 
