@@ -36,19 +36,21 @@ except:
   havempi = False
 
 # TODO: Take as command line argument
-sub_reg_coords = [155,270,200,290]
+#sub_coords = [155,270,200,290]
 
 import argparse
 parser = argparse.ArgumentParser(description='preProcessFITS.py')
 parser.add_argument('--processed_dir', type=str)
 parser.add_argument('--raw_dir', type=str)
 parser.add_argument('--Nfiles', type=str, default="all")
+parser.add_argument('--sub_coords', type=str)
 
 args = parser.parse_args()
-
 raw_dir = args.raw_dir
 processed_dir = args.processed_dir
 Nfiles = args.Nfiles
+sub_coords = args.sub_coords
+sub_coords = [int(x.strip()) for x in sub_coords.split(',') if x != '']
 #if not os.path.exists(raw_dir): os.makedirs(raw_dir)
 #if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
@@ -141,7 +143,7 @@ if rank == 0:
     if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 # set variable from config file
-x1,x2,y1,y2 = sub_reg_coords
+x1,x2,y1,y2 = sub_coords
 
 # create a list of all the fits files
 flist = sorted(glob.glob('%s/aia*.fits' % raw_dir))
@@ -293,7 +295,7 @@ if rank == 0:
         file.write("----------------------------------------" + "\n")
         file.write("FITS directory: %s" % raw_dir + "\n")
         file.write("Processed directory: %s" % processed_dir + "\n")
-        file.write("Sub-region coordinates: (%i, %i)x, (%i, %i)y" % tuple(sub_reg_coords) + "\n")
+        file.write("Sub-region coordinates: (%i, %i)x, (%i, %i)y" % tuple(sub_coords) + "\n")
         file.write("First image timestamp: %s" % mapI.date.strftime('%Y-%m-%d %H:%M:%S') + "\n")
         file.write("Last image timestamp: %s" % mapF.date.strftime('%Y-%m-%d %H:%M:%S') + "\n")
         file.write("Number of Images: %i" % nf + "\n")

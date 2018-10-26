@@ -162,18 +162,27 @@ exposure = np.load('%s/exposures.npy' % processed_dir)
 trim_top = int(np.floor((cube.shape[0] % size) / 2))
 trim_bot = -int(np.ceil((cube.shape[0] % size) / 2))
 
-vis0 = np.load('%s/visual.npy' % processed_dir)
+chunks = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)
 
+if rank == 0:
+    vis0 = np.load('%s/visual.npy' % processed_dir)
+    vis = vis0[trim_top+1:trim_bot-1, 1:-1]
+    np.save('%s/visual.npy' % processed_dir, vis)
+
+"""
 if trim_top == trim_bot == 0:
     #chunks = np.array_split(cube, size, axis=1)  # Split based on # processors
     chunks = np.array_split(cube, size, axis=0)  # Split based on # processors
-    vis = vis0[1:-1, 1:-1]  # to account for 3x3 averaging
+    if rank == 0:
+        vis = vis0[1:-1, 1:-1]  # to account for 3x3 averaging
 else:
     #chunks = np.array_split(cube[:,trim_top:trim_bot], size, axis=1)
     chunks = np.array_split(cube[trim_top:trim_bot], size, axis=0)
-    vis = vis0[trim_top+1:trim_bot-1, 1:-1]  
+    if rank == 0:
+        vis = vis0[trim_top+1:trim_bot-1, 1:-1]  
 
 np.save('%s/visual.npy' % processed_dir, vis)
+"""
 
 # specify which chunks should be handled by each processor
 #for i in range(size):

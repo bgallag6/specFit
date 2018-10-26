@@ -16,6 +16,14 @@ from matplotlib.widgets import Button, TextBox
 from sunpy.coordinates import frames
 
 
+import argparse
+parser = argparse.ArgumentParser(description='submapSelect.py')
+parser.add_argument('--raw_dir', type=str)
+
+args = parser.parse_args()
+raw_dir = args.raw_dir
+
+
 class Index(object):
     
     def saveFig(self, event):
@@ -30,6 +38,7 @@ def onselect(eclick, erelease):
     global x1, y1, x2, y2
     px1, py1 = eclick.xdata, eclick.ydata
     px2, py2 = erelease.xdata, erelease.ydata
+    print(px1,py1)
   
     sub1 = full_map.pixel_to_world(px1*u.pixel, py1*u.pixel)
     sub2 = full_map.pixel_to_world(px2*u.pixel, py2*u.pixel)
