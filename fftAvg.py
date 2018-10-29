@@ -221,7 +221,8 @@ if rank == 0:
     ## Pixel-box averaging
     temp = np.zeros((box_avg_size**2,spectra_seg.shape[2]))
     spectra_array = np.zeros((spectra_seg.shape[0]-(box_trim*2), spectra_seg.shape[1]-(box_trim*2), spectra_seg.shape[2]))
-    spectra_StdDev = np.zeros((spectra_seg.shape[0]-(box_trim*2), spectra_seg.shape[1]-(box_trim*2), spectra_seg.shape[2]))
+    if box_avg_size > 1:
+        spectra_StdDev = np.zeros((spectra_seg.shape[0]-(box_trim*2), spectra_seg.shape[1]-(box_trim*2), spectra_seg.shape[2]))
     
     # calculate pixel-box average, modified range to deal with edges
     for l in range(box_trim,spectra_seg.shape[0]-box_trim):
@@ -236,7 +237,8 @@ if rank == 0:
                     count += 1          
             
             spectra_array[l-box_trim][m-box_trim] = np.average(temp, axis=0)
-            spectra_StdDev[l-box_trim][m-box_trim] = np.std(temp, axis=0)
+            if box_avg_size > 1:
+                spectra_StdDev[l-box_trim][m-box_trim] = np.std(temp, axis=0)
 
     T_final = timer() - start
     T_min_final, T_sec_final = divmod(T_final, 60)
@@ -245,7 +247,8 @@ if rank == 0:
     
     print("Saving files to %s" % processed_dir, flush=True)
     np.save('%s/specCube.npy' % processed_dir, spectra_array)
-    np.save('%s/specUnc.npy' % processed_dir, spectra_StdDev)
+    if box_avg_size > 1:
+        np.save('%s/specUnc.npy' % processed_dir, spectra_StdDev)
     np.save('%s/frequencies.npy' % processed_dir, freqs)
     
     tEnd0 = datetime.datetime.fromtimestamp(time.time())
