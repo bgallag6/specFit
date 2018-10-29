@@ -54,10 +54,9 @@ M2_guess = cfg['M2_guess']
 
 def specFit( subcube, subcube_StdDev ):
         
-  #params = np.zeros((11, subcube.shape[0], subcube.shape[1]))
   params = np.zeros((subcube.shape[0], subcube.shape[1], 11))
   
-  start = timer()
+  start_sub = timer()
   T1 = 0
    
   for l in range(subcube.shape[0]): 
@@ -66,7 +65,7 @@ def specFit( subcube, subcube_StdDev ):
         f = freqs
         s = subcube[l][m]
         
-        # use 3x3 pixel-box std.dev. or adhoc method as fitting uncertainties
+        # use pixel-box std.dev. or adhoc method as fitting uncertainties
         if spec_unc == 'stddev':
             ds = subcube_StdDev[l][m]     
         elif spec_unc == 'adhoc':
@@ -130,21 +129,7 @@ def specFit( subcube, subcube_StdDev ):
             else:
                 rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
             
-            """
-            # populate array with M2 parameters
-            params[0][l][m] = A22
-            params[1][l][m] = n22
-            params[2][l][m] = C22
-            params[3][l][m] = P22
-            params[4][l][m] = fp22
-            params[5][l][m] = fw22
-            params[6][l][m] = f_test2
-            params[7][l][m] = amp_scale2
-            params[8][l][m] = rval
-            params[9][l][m] = rollover
-            params[10][l][m] = redchisqrM22
-            """
-            
+            # populate array with M2 parameters            
             params[l][m][0] = A22
             params[l][m][1] = n22
             params[l][m][2] = C22
@@ -164,21 +149,7 @@ def specFit( subcube, subcube_StdDev ):
             else:
                 rollover = (1. / ((C / A)**(-1. / n))) / 60.
             
-            """
             # populate array with M1 parameters
-            params[0][l][m] = A
-            params[1][l][m] = n
-            params[2][l][m] = C
-            params[3][l][m] = np.NaN
-            params[4][l][m] = np.NaN
-            params[5][l][m] = np.NaN
-            params[6][l][m] = np.NaN
-            params[7][l][m] = np.NaN
-            params[8][l][m] = rval
-            params[9][l][m] = rollover
-            params[10][l][m] = redchisqrM1
-            """
-            
             params[l][m][0] = A
             params[l][m][1] = n
             params[l][m][2] = C
@@ -196,26 +167,25 @@ def specFit( subcube, subcube_StdDev ):
     T = timer()
     T2 = T - T1
     if l == 0:
-        T_init = T - start
+        T_init = T - start_sub
         T_est = T_init*(subcube.shape[0])  
-        T_min, T_sec = divmod(T_est, 60)
-        T_hr, T_min = divmod(T_min, 60)
-        print("On row %i of %i, est. time remaining: %i:%.2i:%.2i" % 
-              (l, subcube.shape[0], T_hr, T_min, T_sec), flush=True)
     else:
-        T_est2 = T2*((subcube.shape[0])-l)
-        T_min2, T_sec2 = divmod(T_est2, 60)
-        T_hr2, T_min2 = divmod(T_min2, 60)
-        print("On row %i of %i, est. time remaining: %i:%.2i:%.2i" % 
-              (l, subcube.shape[0], T_hr2, T_min2, T_sec2), flush=True)
+        T_est = T2*(subcube.shape[0]-l)
+    T_min, T_sec = divmod(T_est, 60)
+    T_hr, T_min = divmod(T_min, 60)
+    if l == 0:
+            start_time = (T_hr, T_min, T_sec)
+            
+    print("Thread %i on row %i/%i, ETR: %i:%.2i:%.2i" % 
+          (rank, l, subcube.shape[0], T_hr, T_min, T_sec), flush=True)
     T1 = T
 
   # print estimated and total program time to screen        
-  print("Beginning est. time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True)
-  T_act = timer() - start
-  T_min3, T_sec3 = divmod(T_act, 60)
-  T_hr3, T_min3 = divmod(T_min3, 60)
-  print("Actual total time = %i:%.2i:%.2i" % (T_hr3, T_min3, T_sec3), flush=True) 
+  print("Beginning est. time = %i:%.2i:%.2i" % start_time, flush=True)
+  T_act = timer() - start_sub
+  T_min, T_sec = divmod(T_act, 60)
+  T_hr, T_min = divmod(T_min, 60)
+  print("Actual total time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True) 
 			
   return params
 	
@@ -261,16 +231,6 @@ df2[0:len(df)] = df
 df2[len(df2)-1] = df2[len(df2)-2]
 ds = df2
 
-"""
-# specify which chunks should be handled by each processor
-for i in range(size):
-    if rank == i:
-        subcube = chunks[i]
-        if spec_unc == 'stddev':
-            subcube_StdDev = chunks_StdDev[i]
-        elif spec_unc == 'adhoc':
-            subcube_StdDev = ds
-"""
             
 subcube = chunks[rank]
 
@@ -292,7 +252,6 @@ if havempi:
 # Have one node stack the results
 if rank == 0:
     if havempi:
-        #stack_p = np.hstack(newData_p)
         stack_p = np.vstack(newData_p)
     else:
         stack_p = params_T

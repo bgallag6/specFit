@@ -72,10 +72,9 @@ def datacube(flist_chunk):
     visAvg = np.empty((mapShape[0], mapShape[1]))
     
     # image data is int16
-    #dCube = np.empty((nf1, mapShape[0], mapShape[1]), dtype=np.int16)
     dCube = np.empty((mapShape[0], mapShape[1], nf1), dtype=np.int16)
     
-    start = timer()
+    start_sub = timer()
     T1 = 0
     
     count = 0
@@ -92,7 +91,6 @@ def datacube(flist_chunk):
             dmap = dmap[:dmap.shape[0]-dimenDiff[0], :dmap.shape[1]-dimenDiff[1]]
             dimCount += 1
         visAvg += (dmap / (smap.exposure_time).value)
-        #dCube[count] = dmap
         dCube[:,:,count] = dmap
         count += 1       
         
@@ -100,21 +98,17 @@ def datacube(flist_chunk):
         T = timer()
         T2 = T - T1
         if count == 0:
-            T_init = T - start
+            T_init = T - start_sub
             T_est = T_init*nf1  
-            T_min, T_sec = divmod(T_est, 60)
-            T_hr, T_min = divmod(T_min, 60)
-            print("On row %i of %i, est. time remaining: %i:%.2i:%.2i" % 
-                  (count, nf1, T_hr, T_min, T_sec), flush=True)
         else:
-            T_est2 = T2*(nf1-count)
-            T_min2, T_sec2 = divmod(T_est2, 60)
-            T_hr2, T_min2 = divmod(T_min2, 60)
-            print("On row %i of %i, est. time remaining: %i:%.2i:%.2i" % 
-                  (count, nf1, T_hr2, T_min2, T_sec2), flush=True)
+            T_est = T2*(nf1-count)
+        T_min, T_sec = divmod(T_est, 60)
+        T_hr, T_min = divmod(T_min, 60)
+        
+        print("Thread %i on row %i/%i, ETR: %i:%.2i:%.2i" % 
+              (rank, count, nf1, T_hr, T_min, T_sec), flush=True)
         T1 = T
     
-    #dCube_trim = dCube[:, diffLatPix:-diffLatPix, xminI:-xminF]
     dCube_trim = dCube[diffLatPix:-diffLatPix, xminI:-xminF]
     visAvg = visAvg[diffLatPix:-diffLatPix, xminI:-xminF]
 
@@ -256,7 +250,6 @@ if rank == 0:
         temp = np.load('%s/chunk_%i_of_%i.npy' % (processed_dir, i+1, size))
         cube_temp.append(temp)
         
-    #cube_final = np.vstack(cube_temp)
     cube_final = np.dstack(cube_temp)
     
     del cube_temp
