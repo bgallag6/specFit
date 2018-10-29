@@ -39,11 +39,13 @@ def cfg():
     parser.add_argument('--num_segments', type=int, default=2)
     parser.add_argument('--time_step', type=str, default='mode')
     parser.add_argument('--mmap_datacube', type=bool, default=True)
+    parser.add_argument('--box_avg_size', type=int, default=3)
     args = parser.parse_args()
     
     processed_dir = args.processed_dir
     num_segments = args.num_segments
     mmap_datacube = args.mmap_datacube
+    box_avg_size = args.box_avg_size
     tStep = args.time_step
     if tStep != "mode" and tStep != "min":
         try:
@@ -51,16 +53,17 @@ def cfg():
         except:
             raise ValueError("time_step must be a float or 'min' or 'mode'")
     
-    print('Using: processed_dir = %s, num_segments = %s, time_step = %s, mmap_datacube = %s' % (processed_dir, num_segments, str(tStep), str(mmap_datacube)), flush=True)
+    if rank == 0:
+        print('Using:\n' + 'processed_dir = %s,\n' % processed_dir +
+              'num_segments = %s, ' % num_segments +
+              'pixel-box size = %s,\n' % box_avg_size +
+              'time_step = %s, ' % str(tStep) + 
+              'mmap_datacube = %s' % str(mmap_datacube), flush=True)
 
-    return processed_dir, num_segments, tStep, mmap_datacube
+    return processed_dir, num_segments, tStep, mmap_datacube, box_avg_size
     
 def fftAvg(subcube):
     
-    #from scipy import fftpack
-    
-    #timeseries = np.empty(subcube.shape[0])
-    #spectra_seg = np.zeros((subcube.shape[1],subcube.shape[2],len(freqs)))
     timeseries = np.empty(subcube.shape[2])
     spectra_seg = np.zeros((subcube.shape[0],subcube.shape[1],len(freqs)))
     
@@ -71,7 +74,6 @@ def fftAvg(subcube):
         for jj in range(spectra_seg.shape[1]):        
             
             # extract timeseries + normalize by exposure time
-            #timeseries = subcube[:,ii,jj] / exposure
             timeseries = subcube[ii,jj] / exposure
             
             # interpolate pixel-intensity values onto specified time grid
@@ -100,28 +102,27 @@ def fftAvg(subcube):
          
         # estimate time remaining and print to screen
         T = timer()
-        T2 = T - T1
+        T2 = T - T1     
         if ii == 0:
             T_init = T - start_sub
-            T_est = T_init*(spectra_seg.shape[0])  
-            T_min, T_sec = divmod(T_est, 60)
-            T_hr, T_min = divmod(T_min, 60)
-            print("On row %i of %i, est. time remaining: %i:%.2i:%.2i" % 
-                  (ii, spectra_seg.shape[0], T_hr, T_min, T_sec), flush=True)
+            T_est = T_init*(spectra_seg.shape[0])      
         else:
-            T_est2 = T2*(spectra_seg.shape[0]-ii)
-            T_min2, T_sec2 = divmod(T_est2, 60)
-            T_hr2, T_min2 = divmod(T_min2, 60)
-            print("On row %i of %i, est. time remaining: %i:%.2i:%.2i" % 
-                  (ii, spectra_seg.shape[0], T_hr2, T_min2, T_sec2), flush=True)
+            T_est = T2*(spectra_seg.shape[0]-ii)        
+        T_min, T_sec = divmod(T_est, 60)
+        T_hr, T_min = divmod(T_min, 60)   
+        if ii == 0:
+            start_time = (T_hr, T_min, T_sec)
+            
+        print("Thread %i on row %i/%i, ETR: %i:%.2i:%.2i" % 
+              (rank, ii, spectra_seg.shape[0], T_hr, T_min, T_sec), flush=True)      
         T1 = T
              
     # print estimated and total program time to screen 
-    print("Beginning est. time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True)
+    print("Beginning est. time = %i:%.2i:%.2i" % start_time, flush=True)
     T_act = timer() - start_sub
-    T_min3, T_sec3 = divmod(T_act, 60)
-    T_hr3, T_min3 = divmod(T_min3, 60)
-    print("Actual total time = %i:%.2i:%.2i" % (T_hr3, T_min3, T_sec3), flush=True) 
+    T_min, T_sec = divmod(T_act, 60)
+    T_hr, T_min = divmod(T_min, 60)
+    print("Actual total time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True) 
                     
     return spectra_seg
 
@@ -140,7 +141,7 @@ else:
   rank = 0
   size = 1
 
-(processed_dir, num_segments, tStep, mmap_datacube) = cfg()
+(processed_dir, num_segments, tStep, mmap_datacube, box_avg_size) = cfg()
 
 start = timer() 
 
@@ -157,37 +158,19 @@ timestamp = np.load('%s/timestamps.npy' % processed_dir)
 exposure = np.load('%s/exposures.npy' % processed_dir)
 
 ## trim top/bottom rows of cube so it divides cleanly by the # of processors
-#trim_top = int(np.floor((cube.shape[1] % size) / 2))
-#trim_bot = -int(np.ceil((cube.shape[1] % size) / 2))
 trim_top = int(np.floor((cube.shape[0] % size) / 2))
 trim_bot = -int(np.ceil((cube.shape[0] % size) / 2))
 
 chunks = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)
 
+# trim region border to account for pixel-box averaging
+box_trim = ((box_avg_size-1)//2)  
+
 if rank == 0:
     vis0 = np.load('%s/visual.npy' % processed_dir)
-    vis = vis0[trim_top+1:trim_bot-1, 1:-1]
+    vis = vis0[trim_top+box_trim:vis0.shape[0]+trim_bot-box_trim, box_trim:vis0.shape[1]-box_trim]
     np.save('%s/visual.npy' % processed_dir, vis)
 
-"""
-if trim_top == trim_bot == 0:
-    #chunks = np.array_split(cube, size, axis=1)  # Split based on # processors
-    chunks = np.array_split(cube, size, axis=0)  # Split based on # processors
-    if rank == 0:
-        vis = vis0[1:-1, 1:-1]  # to account for 3x3 averaging
-else:
-    #chunks = np.array_split(cube[:,trim_top:trim_bot], size, axis=1)
-    chunks = np.array_split(cube[trim_top:trim_bot], size, axis=0)
-    if rank == 0:
-        vis = vis0[trim_top+1:trim_bot-1, 1:-1]  
-
-np.save('%s/visual.npy' % processed_dir, vis)
-"""
-
-# specify which chunks should be handled by each processor
-#for i in range(size):
-#    if rank == i:
-#        subcube = chunks[i]
 subcube = chunks[rank]
 
 if type(tStep) == float:
@@ -224,8 +207,6 @@ if havempi:
     
     # allocate receive buffer  
     if rank == 0:
-        #spectra_seg = np.empty((cube.shape[1]-(trim_top-trim_bot), cube.shape[2], 
-        #                        len(freqs)), dtype='float64')
         spectra_seg = np.empty((cube.shape[0]-(trim_top-trim_bot), cube.shape[1], 
                                 len(freqs)), dtype='float64')
     
@@ -237,27 +218,25 @@ else:
 # Have one node do the last bit
 if rank == 0:
 
-    ## 3x3 Averaging
-    temp = np.zeros((9,spectra_seg.shape[2]))  
-    spectra_array = np.zeros((spectra_seg.shape[0]-2, spectra_seg.shape[1]-2, spectra_seg.shape[2]))
-    spectra_StdDev = np.zeros((spectra_seg.shape[0]-2, spectra_seg.shape[1]-2, spectra_seg.shape[2]))
+    ## Pixel-box averaging
+    temp = np.zeros((box_avg_size**2,spectra_seg.shape[2]))
+    spectra_array = np.zeros((spectra_seg.shape[0]-(box_trim*2), spectra_seg.shape[1]-(box_trim*2), spectra_seg.shape[2]))
+    spectra_StdDev = np.zeros((spectra_seg.shape[0]-(box_trim*2), spectra_seg.shape[1]-(box_trim*2), spectra_seg.shape[2]))
     
-    # calculate 3x3 pixel-box average, start +1 & end -1 to deal with edges
-    for l in range(1,spectra_seg.shape[0]-1):
-        for m in range(1,spectra_seg.shape[1]-1):
+    # calculate pixel-box average, modified range to deal with edges
+    for l in range(box_trim,spectra_seg.shape[0]-box_trim):
+        for m in range(box_trim,spectra_seg.shape[1]-box_trim):
             
-            temp[0] = spectra_seg[l-1][m-1]
-            temp[1] = spectra_seg[l-1][m]
-            temp[2] = spectra_seg[l-1][m+1]
-            temp[3] = spectra_seg[l][m-1]
-            temp[4] = spectra_seg[l][m]
-            temp[5] = spectra_seg[l][m+1]
-            temp[6] = spectra_seg[l+1][m-1]
-            temp[7] = spectra_seg[l+1][m]
-            temp[8] = spectra_seg[l+1][m+1]
+            count = 0
             
-            spectra_array[l-1][m-1] = np.average(temp, axis=0)
-            spectra_StdDev[l-1][m-1] = np.std(temp, axis=0)
+            for l1 in range(-box_trim, box_trim+1, 1):
+                for m2 in range(-box_trim, box_trim+1, 1):
+                    
+                    temp[count] = spectra_seg[l+l1][m+m2]
+                    count += 1          
+            
+            spectra_array[l-box_trim][m-box_trim] = np.average(temp, axis=0)
+            spectra_StdDev[l-box_trim][m-box_trim] = np.std(temp, axis=0)
 
     T_final = timer() - start
     T_min_final, T_sec_final = divmod(T_final, 60)
@@ -274,8 +253,9 @@ if rank == 0:
     scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
     
     with open('log.txt', 'a+') as file:
-        file.write("%s: FFT & 3x3 Averaging" % scriptName + "\n")
+        file.write("%s: FFT & Pixel-Box Averaging" % scriptName + "\n")
         file.write("----------------------------" + "\n")
         file.write("Number of time segments: %i" % num_segments + "\n")
+        file.write("Pixel-box size: %i" % box_avg_size + "\n")
         file.write("Program start time: %s" % tStart + "\n")
         file.write("Program end time: %s" % tEnd + "\n\n")
