@@ -14,8 +14,6 @@ where N = number of processors.
 from timeit import default_timer as timer
 import numpy as np
 from scipy.optimize import curve_fit as Fit
-from scipy import fftpack
-from scipy.stats.stats import pearsonr 
 import yaml
 from specModel import M1, M2         
 import time
@@ -54,7 +52,8 @@ M2_guess = cfg['M2_guess']
 
 def specFit( subcube, subcube_StdDev ):
         
-  params = np.zeros((subcube.shape[0], subcube.shape[1], 11))
+  #params = np.zeros((subcube.shape[0], subcube.shape[1], 11))
+  params = np.zeros((subcube.shape[0], subcube.shape[1], 9))
   
   start_sub = timer()
   T1 = 0
@@ -68,7 +67,7 @@ def specFit( subcube, subcube_StdDev ):
         # use pixel-box std.dev. or adhoc method as fitting uncertainties
         if spec_unc == 'stddev':
             ds = subcube_StdDev[l][m]     
-        elif spec_unc == 'adhoc':
+        elif spec_unc in ['adhoc', 'constant']:
             ds = subcube_StdDev
                                      
         ### fit models to spectra using SciPy's Levenberg-Marquart method
@@ -114,20 +113,14 @@ def specFit( subcube, subcube_StdDev ):
         chisqrM2 = ((residsM2/ds)**2).sum()
         redchisqrM2 = chisqrM2 / float(f.size-6)         
         
-        f_test2 = ((chisqrM1-chisqrM2)/(6-3))/((chisqrM2)/(f.size-6))
+        f_test = ((chisqrM1-chisqrM2)/(6-3))/((chisqrM2)/(f.size-6))
         
         # extract the lorentzian-amplitude scaling factor
-        #amp_scale2 = P22 / M1(np.exp(fp22), A22, n22, C22)  
-        amp_scale2 = m2_param[3] / M1(np.exp(m2_param[4]), *m2_param[:3])
+        #amp_scale = P22 / M1(np.exp(fp22), A22, n22, C22)  
+        amp_scale = m2_param[3] / M1(np.exp(m2_param[4]), *m2_param[:3])
         
         
         if chisqrM1 > chisqrM2:
-            rval = pearsonr(m2_fit, s)[0]
-            if m2_param[2] <= 0.:
-                rollover = np.nan
-            else:
-                #rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
-                rollover = (1./((m2_param[2]/m2_param[0])**(-1./m2_param[1])))/60.
             
             # populate array with M2 parameters            
             #params[l][m][0] = A22
@@ -137,33 +130,30 @@ def specFit( subcube, subcube_StdDev ):
             #params[l][m][4] = fp22
             #params[l][m][5] = fw22
             params[l][m][:6] = m2_param
-            params[l][m][6] = f_test2
-            params[l][m][7] = amp_scale2
-            params[l][m][8] = rval
-            params[l][m][9] = rollover
-            params[l][m][10] = redchisqrM2
+            params[l][m][6] = f_test
+            params[l][m][7] = amp_scale
+            params[l][m][8] = redchisqrM2
+            #params[l][m][8] = rval
+            #params[l][m][9] = rollover
+            #params[l][m][10] = redchisqrM2
             
         else:
-            rval = pearsonr(m1_fit, s)[0]
-            if m1_param[2] <= 0.:
-                rollover = np.nan
-            else:
-                #rollover = (1. / ((C / A)**(-1. / n))) / 60.
-                rollover = (1./((m1_param[2]/m1_param[0])**(-1./m1_param[1])))/60.
             
             # populate array with M1 parameters
             #params[l][m][0] = A
             #params[l][m][1] = n
             #params[l][m][2] = C
+            #params[l][m][3] = np.NaN
+            #params[l][m][4] = np.NaN
+            #params[l][m][5] = np.NaN
+            #params[l][m][6] = np.NaN
+            #params[l][m][7] = np.NaN
             params[l][m][:3] = m1_param 
-            params[l][m][3] = np.NaN
-            params[l][m][4] = np.NaN
-            params[l][m][5] = np.NaN
-            params[l][m][6] = np.NaN
-            params[l][m][7] = np.NaN
-            params[l][m][8] = rval
-            params[l][m][9] = rollover
-            params[l][m][10] = redchisqrM1
+            params[l][m][3:8] = np.NaN
+            params[l][m][8] = redchisqrM1
+            #params[l][m][8] = rval
+            #params[l][m][9] = rollover
+            #params[l][m][10] = redchisqrM1
         
         
     # estimate time remaining and print to screen
@@ -209,6 +199,11 @@ else:
 
 start = timer()
 
+haveUnc = True
+if not os.path.exists(os.path.join(processed_dir,'specUnc.npy')):
+    haveUnc = False
+    spec_unc = 'constant'
+
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
@@ -216,10 +211,12 @@ if rank == 0:
 if mmap_spectra == True:
     # load memory-mapped array as read-only
     cube = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
-    cube_StdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
+    if haveUnc:
+        cube_StdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
 else:
     cube = np.load('%s/specCube.npy' % processed_dir)
-    cube_StdDev = np.load('%s/specUnc.npy' % processed_dir)
+    if haveUnc:
+        cube_StdDev = np.load('%s/specUnc.npy' % processed_dir)
 
 # Split the data based on no. of processors
 chunks = np.array_split(cube, size)
@@ -241,6 +238,8 @@ if spec_unc == 'stddev':
     subcube_StdDev = chunks_StdDev[rank]
 elif spec_unc == 'adhoc':
     subcube_StdDev = ds
+elif spec_unc == 'constant':
+    subcube_StdDev = np.ones_like(cube[0][0])
 
 # verify each processor received subcube with correct dimensions
 ss = np.shape(subcube)
