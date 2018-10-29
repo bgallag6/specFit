@@ -79,7 +79,7 @@ def specFit( subcube, subcube_StdDev ):
         except RuntimeError: pass
         except ValueError: pass
     
-        A, n, C = m1_param
+        #A, n, C = m1_param
         
         # first fit M2 model using 'dogbox' method          
         try:                                           
@@ -88,8 +88,6 @@ def specFit( subcube, subcube_StdDev ):
         
         except RuntimeError: pass
         except ValueError: pass
-        
-        A2, n2, C2, P2, fp2, fw2 = m2_param0
         
         
         # next fit M2 model using default 'trf' method
@@ -100,7 +98,7 @@ def specFit( subcube, subcube_StdDev ):
         except RuntimeError: pass
         except ValueError: pass
         
-        A22, n22, C22, P22, fp22, fw22 = m2_param  # unpack model parameters     
+        #A22, n22, C22, P22, fp22, fw22 = m2_param  # unpack model parameters     
                        
         # create model functions from fitted parameters
         m1_fit = M1(f, *m1_param)        
@@ -112,47 +110,52 @@ def specFit( subcube, subcube_StdDev ):
         chisqrM1 =  ((residsM1/ds)**2).sum()
         redchisqrM1 = chisqrM1 / float(f.size-3)  
         
-        residsM22 = (s - m2_fit)
-        chisqrM22 = ((residsM22/ds)**2).sum()
-        redchisqrM22 = chisqrM22 / float(f.size-6)         
+        residsM2 = (s - m2_fit)
+        chisqrM2 = ((residsM2/ds)**2).sum()
+        redchisqrM2 = chisqrM2 / float(f.size-6)         
         
-        f_test2 = ((chisqrM1-chisqrM22)/(6-3))/((chisqrM22)/(f.size-6))
+        f_test2 = ((chisqrM1-chisqrM2)/(6-3))/((chisqrM2)/(f.size-6))
         
         # extract the lorentzian-amplitude scaling factor
-        amp_scale2 = P22 / M1(np.exp(fp22), A22, n22, C22)  
+        #amp_scale2 = P22 / M1(np.exp(fp22), A22, n22, C22)  
+        amp_scale2 = m2_param[3] / M1(np.exp(m2_param[4]), *m2_param[:3])
         
         
-        if chisqrM1 > chisqrM22:
+        if chisqrM1 > chisqrM2:
             rval = pearsonr(m2_fit, s)[0]
-            if C22 <= 0.:
+            if m2_param[2] <= 0.:
                 rollover = np.nan
             else:
-                rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
+                #rollover = (1. / ((C22 / A22)**(-1. / n22))) / 60.
+                rollover = (1./((m2_param[2]/m2_param[0])**(-1./m2_param[1])))/60.
             
             # populate array with M2 parameters            
-            params[l][m][0] = A22
-            params[l][m][1] = n22
-            params[l][m][2] = C22
-            params[l][m][3] = P22
-            params[l][m][4] = fp22
-            params[l][m][5] = fw22
+            #params[l][m][0] = A22
+            #params[l][m][1] = n22
+            #params[l][m][2] = C22
+            #params[l][m][3] = P22
+            #params[l][m][4] = fp22
+            #params[l][m][5] = fw22
+            params[l][m][:6] = m2_param
             params[l][m][6] = f_test2
             params[l][m][7] = amp_scale2
             params[l][m][8] = rval
             params[l][m][9] = rollover
-            params[l][m][10] = redchisqrM22
+            params[l][m][10] = redchisqrM2
             
         else:
             rval = pearsonr(m1_fit, s)[0]
-            if C <= 0.:
+            if m1_param[2] <= 0.:
                 rollover = np.nan
             else:
-                rollover = (1. / ((C / A)**(-1. / n))) / 60.
+                #rollover = (1. / ((C / A)**(-1. / n))) / 60.
+                rollover = (1./((m1_param[2]/m1_param[0])**(-1./m1_param[1])))/60.
             
             # populate array with M1 parameters
-            params[l][m][0] = A
-            params[l][m][1] = n
-            params[l][m][2] = C
+            #params[l][m][0] = A
+            #params[l][m][1] = n
+            #params[l][m][2] = C
+            params[l][m][:3] = m1_param 
             params[l][m][3] = np.NaN
             params[l][m][4] = np.NaN
             params[l][m][5] = np.NaN
