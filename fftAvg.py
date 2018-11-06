@@ -92,7 +92,8 @@ def fftAvg(subcube):
               sig_fft = fftpack.fft(sig)
               #sig_fft = fftpack.rfft(sig)  # real-FFT                
               powers = np.abs(sig_fft)[pidxs]
-              powers = ((powers/len(sig))**2)*(1./(sig.std()**2))*2  # normalize
+              if sig.std() != 0:
+                  powers = ((powers/len(sig))**2)*(1./(sig.std()**2))*2  # normalize
               avg_array += powers
             
             avg_array /= num_segments  # average fourier power of the segments
