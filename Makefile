@@ -38,10 +38,10 @@ endif
 
 demo:
 	python preProcessDemo.py --raw_dir $(raw_dir) --processed_dir $(processed_dir)
-	$(PREFIX) python fftAvg.py --processed_dir $(processed_dir)
-#	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
+	$(PREFIX) python fftAvg.py --num_segments 1 --processed_dir $(processed_dir)
+	$(PREFIX) python specFit.py --processed_dir $(processed_dir)
 #	python paramPlot.py --processed_dir $(processed_dir)
-	python specVis.py --processed_dir $(processed_dir)
+	python specVis.py --processed_dir $(processed_dir) --raw_dir $(raw_dir)
 
 fits:
 	$(PREFIX) python preProcessFITS.py --Nfiles 100 --raw_dir $(raw_dir) --processed_dir $(processed_dir)

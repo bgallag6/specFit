@@ -24,10 +24,12 @@ from sunpy.map import Map
 
 import argparse
 parser = argparse.ArgumentParser(description='specVis.py')
-#parser.add_argument('--processed_dir', type=str, default='images/processed/demo')
-parser.add_argument('--processed_dir', type=str, default='images/processed/20120606/1600')
+parser.add_argument('--processed_dir', type=str, default='images/processed/demo')
+#parser.add_argument('--processed_dir', type=str, default='images/processed/20120606/1600')
+parser.add_argument('--raw_dir', type=str, default='images/processed/demo')
 args = parser.parse_args()
 
+raw_dir = args.raw_dir
 processed_dir = args.processed_dir
 
 def ax2setup():
@@ -815,10 +817,8 @@ def getProperties(filename):
     
     return mapDate, mapWave, mapXScale, mapYScale
 
-raw_dir = 'C:/Users/Brendan/Desktop/specFit/images/raw/20120606/1600/fits'
-
 # create a list of all the fits files
-flist = sorted(glob.glob('%s/aia*.fits' % raw_dir))
+flist = sorted(glob.glob(raw_dir))
 
 if flist[0].find('.fits') != -1:
     date, wavelength, xscale, yscale = getProperties(flist[0])
@@ -837,17 +837,9 @@ if fits:
 else:
     ax1.set_title(r'Visual Average', y = 1.01, fontsize=17)
     param = vis
-    #h_min = np.percentile(param,1) 
-    #h_max = np.percentile(param,99)
-
-    h_min = 0
-    h_max = 127
-
     print(param)
-    param[0,0] = 10
-    param[0,1] = 20
-    param[0,2] = 30
-    print(param)
+    h_min = np.percentile(param,1) 
+    h_max = np.percentile(param,99)
 
     im, = ([ax1.imshow(param, cmap=plt.get_cmap('viridis', 32), 
                        vmin=h_min, vmax=h_max, picker=True)])

@@ -26,13 +26,31 @@ if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 ###########################################################################
 # Create images
+type = 2
 imarray = np.zeros((Nx,Ny), dtype=np.uint8)
 T = float(N)
 for i in range(0,N):
     arr = imarray
     t = float(i)
-    tmp = np.sin(8.*2*np.pi*t/T)+np.sin(32.*2*np.pi*t/T)+np.sin(64.*2*np.pi*t/T)
-    arr[:,:] = np.uint8( 255.0*(tmp/3.+1.)/2. )
+    if type == 1:
+        # Single period
+        tmp = np.sin(4*np.pi*t/T)
+    elif type == 2:
+        # Power law
+        f = np.arange(2,128,2)
+        tmp = 0
+        for j in range(0,len(f)):
+            tmp = tmp + (1./float(f[j]))*np.sin(f[j]*2.*np.pi*t/T)
+    else:
+        # Power law + tail
+        f = np.arange(2,128,2)
+        tmp = 0
+        for j in range(0,len(f)):
+            if f[j] < 32:
+                A = (1./float(f[j]))
+            tmp = tmp + A*np.sin(f[j]*2.*np.pi*t/T)
+
+    arr[:,:] = np.uint8( 255*(tmp + 1.0)/2.0 )
     im = Image.fromarray(arr)
     im.save(os.path.join(raw_dir,prefix+'-%03d.tiff' % i))
 
@@ -53,6 +71,8 @@ for i in range(0,N):
     im = Image.open(os.path.join(raw_dir,prefix+'-%03d.tiff' % i))
     #cube[i,:,:] = np.asarray(im)
     cube[:,:,i] = np.asarray(im)
+
+#print(cube[0,0,:])
 
 #cube_avg = np.uint8(np.average(cube,axis=0))
 cube_avg = np.uint8(np.average(cube,axis=2))
