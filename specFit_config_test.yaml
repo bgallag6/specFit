@@ -1,0 +1,31 @@
+##################################################################
+# specFit.py parameters
+mmap_spectra: True
+spec_unc: "adhoc"
+M1_low: [-0.002, 0.3, -0.01]
+M1_high: [0.002, 6., 0.01]
+M2_low: [0., 0.3, -0.01, 0.00001, -6.5, 0.05]
+M2_high: [0.002, 6., 0.01, 0.2, -4.6, 0.8]
+#M2_low: [0., 0., -0.01, 0.00001, -6.5, 0.05]
+#M2_high: [0.002, 3., 0.01, 0.2, -4.6, 0.8]
+M1_guess:
+M2_guess:
+##################################################################
+
+#pixel_scale_factor = '0.6' # Default 1
+#pixel_scale_unit = 'arcsec' # Default ''
+#pixel_origin = [-500,-500] # 
+
+#M2_units: ['','','','','[Min]','[Min]']
+M2_titles: ['Slope Coefficient', 'Power-Law Index', 'Power-Law Tail', 'Lorentzian Amplitude', 'Lorentzian Location', 'Lorentzian Width']
+
+M2_labels: ['Coeff.', 'Index', 'Tail', 'Lorentz. Amp.', 'Lorentz. Loc.', 'Lorentz. Wid.']
+
+wavelength: 1600
+sub_reg_coords: [155,270,200,290]
+bin_frac: 1
+
+save_fig: False
+
+specVis_dir: "./images/processed/fits"
+
