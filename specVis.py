@@ -44,6 +44,8 @@ def ax2setup():
     ax2.set_ylim(ylow, yhigh)
     ax2.set_xlim(xlow, xhigh) 
     
+    #import pdb; pdb.set_trace()            
+
     curveSpec, = ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
     #curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
     if haveParam:
@@ -325,7 +327,7 @@ def setPre():
         spec = np.array(spectra[iy][ix])
             
         title.set_text('Pixel (%ix , %iy): Spectra' % (ix, iy))
-        
+
         curveSpec.set_ydata(spec)
         
         ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
@@ -641,11 +643,13 @@ def onclick(event):
         global ix, iy
         del ax1.collections[:]
         plt.draw()
-        
-        print("location: (%ix, %iy)" % (ixx, iyy))
+
+        #print("location: (%fx, %fy)" % (ixx, iyy))        
+        #print("location: (%ix, %iy)" % (ixx, iyy))
         ix = int(round(ixx))
         iy = int(round(iyy))
         
+        #print(spectra)
         s = np.array(spectra[iy][ix])
         
         if specVis_fit == True:
@@ -660,7 +664,7 @@ def onclick(event):
         ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
         
         title.set_text('Pixel (%ix , %iy): Spectra' % (ix, iy))
-        
+
         curveSpec.set_ydata(s)
     
         timeseries = np.array(imCube[iy+1][ix+1] / exposures)
@@ -837,19 +841,30 @@ if fits:
 else:
     ax1.set_title(r'Visual Average', y = 1.01, fontsize=17)
     param = vis
-    print(param)
+
     h_min = np.percentile(param,1) 
     h_max = np.percentile(param,99)
 
     im, = ([ax1.imshow(param, cmap=plt.get_cmap('viridis', 32), 
                        vmin=h_min, vmax=h_max, picker=True)])
 
-    ax1.set_xticklabels(labels2int(ax1.get_xticks()))
-    ax1.set_yticklabels(labels2int(ax1.get_yticks()))
+
+    #ax1.set_xticklabels(labels2int(ax1.get_xticks()))
+    #ax1.set_yticklabels(labels2int(ax1.get_yticks()))
     
+
+#import pdb; pdb.set_trace()            
+
+if param.size <= 100:
+    ax1.set_xticks(-0.5+np.arange(0, param.shape[0], 1), minor=True)
+    ax1.set_xticks(np.arange(0, param.shape[0], 1))
+    ax1.set_yticks(-0.5+np.arange(0, param.shape[0], 1), minor=True)
+    ax1.set_yticks(np.arange(0, param.shape[0], 1))
+
+    ax1.grid(which='minor')
     
-ax1.set_xlim(0, param.shape[1]-0.5)
-ax1.set_ylim(0, param.shape[0]-0.5)     
+ax1.set_xlim(-0.5, param.shape[1]-0.5)
+ax1.set_ylim(-0.5, param.shape[0]-0.5)     
 
 # design colorbar for heatmaps
 global cbar1
@@ -879,9 +894,10 @@ xspan = np.log10(freqs[-1]) - np.log10(freqs[0])
 xlow = 10**(np.log10(freqs[0]) - (xspan/10))
 xhigh = 10**(np.log10(freqs[-1]) + (xspan/10))
 
-yspan = np.log10(np.percentile(spectra, 99.9)) - np.log10(np.percentile(spectra, 0.1))
-ylow = 10**(np.log10(np.percentile(spectra, 0.1)) - (yspan/10))
-yhigh = 10**(np.log10(np.percentile(spectra, 99.9)) + (yspan/10))
+Ipos = np.where(spectra>0)
+yspan = np.log10(np.percentile(spectra[Ipos], 99.9)) - np.log10(np.percentile(spectra[Ipos], 0.1))
+ylow = 10**(np.log10(np.percentile(spectra[Ipos], 0.1)) - (yspan/10))
+yhigh = 10**(np.log10(np.percentile(spectra[Ipos], 99.9)) + (yspan/10))
 
 emptyLine = [0 for i in range(len(freqs))]
 

@@ -69,6 +69,7 @@ def fftAvg(subcube):
     
     start_sub = timer()
     T1 = 0    
+
     
     for ii in range(spectra_seg.shape[0]):
         for jj in range(spectra_seg.shape[1]):        
@@ -84,10 +85,8 @@ def fftAvg(subcube):
             # trim timeseries to be integer multiple of num_segments
             v_interp = v_interp[0:len(v_interp)-rem]  
             split = np.split(v_interp, num_segments)
-            
             # perform Fast Fourier Transform on each segment
             for i in range(num_segments):     
-                
               sig = split[i]
               sig_fft = fftpack.fft(sig)
               #sig_fft = fftpack.rfft(sig)  # real-FFT                
@@ -124,7 +123,6 @@ def fftAvg(subcube):
     T_min, T_sec = divmod(T_act, 60)
     T_hr, T_min = divmod(T_min, 60)
     print("Actual total time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True) 
-                    
     return spectra_seg
 
 
@@ -192,8 +190,15 @@ rem = n % num_segments
 freq_size = (n - rem) // num_segments
 
 sample_freq = fftpack.fftfreq(freq_size, d=timeStep)
+
 pidxs = np.where(sample_freq > 0)
+
+if freq_size % 2 == 0: # Even time series length. Keep f = -0.5 value.
+    pidxs = np.append(pidxs,[pidxs[-1]+1])
+
 freqs = sample_freq[pidxs]
+if freq_size % 2 == 0:
+    freqs[-1] = -freqs[-1]
 
 ## Each processor runs function on subcube, results are gathered when finished
 
@@ -202,6 +207,9 @@ ss = np.shape(subcube)
 print("Processor", rank, "received an array with dimensions", ss, flush=True)
 
 spectra_seg_part = fftAvg(subcube)
+
+#from matplotlib import pyplot as plt
+#import pdb; pdb.set_trace()            
 
 if havempi:
     spectra_seg = None 

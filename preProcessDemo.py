@@ -15,8 +15,8 @@ Ny = 5 # Number of pixels in y
 
 import argparse
 parser = argparse.ArgumentParser(description='preProcessDemo.py')
-parser.add_argument('--processed_dir', type=str)
-parser.add_argument('--raw_dir', type=str)
+parser.add_argument('--processed_dir', type=str, default='./images/processed/demo')
+parser.add_argument('--raw_dir', type=str, default='./images/raw/demo')
 args = parser.parse_args()
 raw_dir = args.raw_dir
 processed_dir = args.processed_dir
@@ -26,7 +26,7 @@ if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 ###########################################################################
 # Create images
-type = 2
+type = 1
 imarray = np.zeros((Nx,Ny), dtype=np.uint8)
 T = float(N)
 for i in range(0,N):
