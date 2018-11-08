@@ -133,9 +133,15 @@ else:
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
-    if not os.path.exists(raw_dir): os.makedirs(raw_dir)
+    #if not os.path.exists(raw_dir): os.makedirs(raw_dir)
     if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
+if not os.path.exists(raw_dir):
+    if rank == 0:
+        sys.exit("Raw directory '%s' does not exist." % raw_dir)
+    else:
+        sys.exit()
+        
 # set variable from config file
 x1,x2,y1,y2 = sub_coords
 
