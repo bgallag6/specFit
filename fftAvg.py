@@ -194,7 +194,7 @@ sample_freq = fftpack.fftfreq(freq_size, d=timeStep)
 pidxs = np.where(sample_freq > 0)
 
 if freq_size % 2 == 0: # Even time series length. Keep f = -0.5 value.
-    pidxs = np.append(pidxs,[pidxs[-1]+1])
+    pidxs = np.append(pidxs,[pidxs[0][-1]+1])
 
 freqs = sample_freq[pidxs]
 if freq_size % 2 == 0:
