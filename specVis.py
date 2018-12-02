@@ -724,7 +724,8 @@ def labels2int(labels):
 ##############################################################################
 """
 
-#processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
+processed_dir = 'C:/Users/Brendan/Desktop/specFit/images/processed/20120606/1600'
+raw_dir = 'C:/Users/Brendan/Desktop/specFit/images/raw/20120606/1600/fits'
 
 #print("Starting specVis...", flush=True)
 

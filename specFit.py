@@ -52,7 +52,6 @@ M2_guess = cfg['M2_guess']
 
 def specFit( subcube, subcube_StdDev ):
         
-  #params = np.zeros((subcube.shape[0], subcube.shape[1], 11))
   params = np.zeros((subcube.shape[0], subcube.shape[1], 9))
   
   start_sub = timer()
@@ -77,8 +76,6 @@ def specFit( subcube, subcube_StdDev ):
                   
         except RuntimeError: pass
         except ValueError: pass
-    
-        #A, n, C = m1_param
         
         # first fit M2 model using 'dogbox' method          
         try:                                           
@@ -96,8 +93,6 @@ def specFit( subcube, subcube_StdDev ):
 
         except RuntimeError: pass
         except ValueError: pass
-        
-        #A22, n22, C22, P22, fp22, fw22 = m2_param  # unpack model parameters     
                        
         # create model functions from fitted parameters
         m1_fit = M1(f, *m1_param)        
@@ -121,39 +116,17 @@ def specFit( subcube, subcube_StdDev ):
         
         
         if chisqrM1 > chisqrM2:
-            
             # populate array with M2 parameters            
-            #params[l][m][0] = A22
-            #params[l][m][1] = n22
-            #params[l][m][2] = C22
-            #params[l][m][3] = P22
-            #params[l][m][4] = fp22
-            #params[l][m][5] = fw22
             params[l][m][:6] = m2_param
             params[l][m][6] = f_test
             params[l][m][7] = amp_scale
             params[l][m][8] = redchisqrM2
-            #params[l][m][8] = rval
-            #params[l][m][9] = rollover
-            #params[l][m][10] = redchisqrM2
             
-        else:
-            
+        else:           
             # populate array with M1 parameters
-            #params[l][m][0] = A
-            #params[l][m][1] = n
-            #params[l][m][2] = C
-            #params[l][m][3] = np.NaN
-            #params[l][m][4] = np.NaN
-            #params[l][m][5] = np.NaN
-            #params[l][m][6] = np.NaN
-            #params[l][m][7] = np.NaN
             params[l][m][:3] = m1_param 
             params[l][m][3:8] = np.NaN
             params[l][m][8] = redchisqrM1
-            #params[l][m][8] = rval
-            #params[l][m][9] = rollover
-            #params[l][m][10] = redchisqrM1
         
         
     # estimate time remaining and print to screen
@@ -218,10 +191,6 @@ else:
     if haveUnc:
         cube_StdDev = np.load('%s/specUnc.npy' % processed_dir)
 
-# Split the data based on no. of processors
-chunks = np.array_split(cube, size)
-chunks_StdDev = np.array_split(cube_StdDev, size)
-
 freqs = np.load('%s/frequencies.npy' % processed_dir)
 
 # assign equal weights to all parts of curve & use as fitting uncertainties
@@ -231,11 +200,16 @@ df2[0:len(df)] = df
 df2[len(df2)-1] = df2[len(df2)-2]
 ds = df2
 
+# Split the data based on no. of processors
+#chunks = np.array_split(cube, size)
+#chunks_StdDev = np.array_split(cube_StdDev, size)
             
-subcube = chunks[rank]
+#subcube = chunks[rank]
+subcube = np.array_split(cube, size)[rank]
 
 if spec_unc == 'stddev':
-    subcube_StdDev = chunks_StdDev[rank]
+    #subcube_StdDev = chunks_StdDev[rank]
+    subcube_StdDev = np.array_split(cube_StdDev, size)[rank]
 elif spec_unc == 'adhoc':
     subcube_StdDev = ds
 elif spec_unc == 'constant':

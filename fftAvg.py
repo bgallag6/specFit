@@ -160,8 +160,6 @@ exposure = np.load('%s/exposures.npy' % processed_dir)
 trim_top = int(np.floor((cube.shape[0] % size) / 2))
 trim_bot = -int(np.ceil((cube.shape[0] % size) / 2))
 
-chunks = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)
-
 # trim region border to account for pixel-box averaging
 box_trim = ((box_avg_size-1)//2)  
 
@@ -170,7 +168,10 @@ if rank == 0:
     vis = vis0[trim_top+box_trim:vis0.shape[0]+trim_bot-box_trim, box_trim:vis0.shape[1]-box_trim]
     np.save('%s/visual.npy' % processed_dir, vis)
 
-subcube = chunks[rank]
+#chunks = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)
+
+#subcube = chunks[rank]
+subcube = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)[rank]
 
 if type(tStep) == float:
     timeStep = tStep

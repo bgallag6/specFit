@@ -36,23 +36,21 @@ except:
   havempi = False
 
 # TODO: Take as command line argument
-#sub_coords = [155,270,200,290]
+#sub_reg_coords = [155,270,200,290]
 
 import argparse
 parser = argparse.ArgumentParser(description='preProcessFITS.py')
 parser.add_argument('--processed_dir', type=str)
 parser.add_argument('--raw_dir', type=str)
 parser.add_argument('--Nfiles', type=str, default="all")
-parser.add_argument('--sub_coords', type=str)
+parser.add_argument('--sub_reg_coords', type=str)
 
 args = parser.parse_args()
 raw_dir = args.raw_dir
 processed_dir = args.processed_dir
 Nfiles = args.Nfiles
-sub_coords = args.sub_coords
-sub_coords = [int(x.strip()) for x in sub_coords.split(',') if x != '']
-#if not os.path.exists(raw_dir): os.makedirs(raw_dir)
-#if not os.path.exists(processed_dir): os.makedirs(processed_dir)
+sub_reg_coords = args.sub_reg_coords
+sub_reg_coords = [int(x.strip()) for x in sub_reg_coords.split(',') if x != '']
 
 def datacube(flist_chunk):
     # rebin region to desired fraction 
@@ -129,21 +127,22 @@ else:
   comm = None
   rank = 0
   size = 1
-
-if rank == 0:
-    tStart0 = datetime.datetime.fromtimestamp(time.time())
-    tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
-    #if not os.path.exists(raw_dir): os.makedirs(raw_dir)
-    if not os.path.exists(processed_dir): os.makedirs(processed_dir)
-
+  
+  
 if not os.path.exists(raw_dir):
     if rank == 0:
         sys.exit("Raw directory '%s' does not exist." % raw_dir)
     else:
         sys.exit()
         
+if rank == 0:
+    tStart0 = datetime.datetime.fromtimestamp(time.time())
+    tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
+    if not os.path.exists(processed_dir): os.makedirs(processed_dir)
+
+        
 # set variable from config file
-x1,x2,y1,y2 = sub_coords
+x1,x2,y1,y2 = sub_reg_coords
 
 # create a list of all the fits files
 flist = sorted(glob.glob('%s/aia*.fits' % raw_dir))
@@ -193,8 +192,8 @@ mapShape = midmap.data.shape
 
 # calculate pixels to trim based off of what actual derotation trims 
 # *for some reason this result is different than method above
-diffMapI = diffrot_map(Map(flist[0]).submap(c3, c4), time=dt0)
-diffMapF = diffrot_map(Map(flist[-1]).submap(c3, c4), time=dt0)
+diffMapI = diffrot_map(mapI.submap(c3, c4), time=dt0)
+diffMapF = diffrot_map(mapF.submap(c3, c4), time=dt0)
 
 xminindI = np.argmin(np.fliplr(diffMapI.data), axis=1)[diffLatPix:-diffLatPix]
 xminindF = np.argmin(diffMapF.data, axis=1)[diffLatPix:-diffLatPix]
@@ -294,7 +293,7 @@ if rank == 0:
         file.write("----------------------------------------" + "\n")
         file.write("FITS directory: %s" % raw_dir + "\n")
         file.write("Processed directory: %s" % processed_dir + "\n")
-        file.write("Sub-region coordinates: (%i, %i)x, (%i, %i)y" % tuple(sub_coords) + "\n")
+        file.write("Sub-region coordinates: (%i, %i)x, (%i, %i)y" % tuple(sub_reg_coords) + "\n")
         file.write("First image timestamp: %s" % mapI.date.strftime('%Y-%m-%d %H:%M:%S') + "\n")
         file.write("Last image timestamp: %s" % mapF.date.strftime('%Y-%m-%d %H:%M:%S') + "\n")
         file.write("Number of Images: %i" % nf + "\n")
