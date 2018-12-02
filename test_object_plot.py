@@ -32,6 +32,7 @@ args = parser.parse_args()
 raw_dir = args.raw_dir
 processed_dir = args.processed_dir
 
+
 def vminVmax(arr):
     # compute 1st and 99th percentile heatmap values (to exclude outliers) 
     flat_arr = arr.flatten()
@@ -40,25 +41,6 @@ def vminVmax(arr):
     max0 = np.percentile(no_nan_arr, 99.)
     return min0, max0
 
-"""
-## make definintion -- used 3 times (be careful as middle use has self.update2 vs functions.update2)
-if haveParam:
-    param = h_map[iy,ix,:6]
-else:
-    global curveM2
-    param = (np.array(M2_low) + np.array(M2_high)) / 2
-    curveM2, = self.ax2.loglog(freqs, emptyLine, c='r', lw=1.5, label='M2')
-    
-axsliders = []
-fnsliders = []
-
-# make parameter sliders
-for i, M2_label in enumerate(M2_labels):
-    axsliders.append(plt.axes([0.15, 0.23-(0.04*i), 0.6, 0.02]))
-    fnsliders.append(Slider(axsliders[i], M2_label, M2_low[i], M2_high[i], param[i]))
-    fnsliders[i].on_changed(functions.update2)
-    fnsliders[i].valtext.set_text(text[i] % param[i])
-"""
 
 ## create plot object that all actions will modify
 class cPlot(object):
@@ -145,26 +127,24 @@ class cPlot(object):
         
         #import pdb; pdb.set_trace()            
     
-        self.curveSpec, = self.ax2.loglog(freqs, emptyLine, 'k', linewidth=1.5)
-        #curveM1A, = ax2.loglog(freqs, emptyLine, 'r', linewidth=1.3, label='M1')
-        if haveParam:
-            self.curveM2, = self.ax2.loglog(freqs, emptyLine, c='r', lw=1.5, label='M2')
-            self.curveM1, = self.ax2.loglog(freqs, emptyLine, c='g', lw=1.5, label='M2: Power Law')
-            self.curveLorentz, = self.ax2.loglog(freqs, emptyLine, c='g', ls='--', lw=1.5, label='M2: Lorentzian')
-            
-            self.leg = self.ax2.legend(loc='lower left')
-            self.leg.get_frame().set_alpha(0.4)
-            
-            lines = [self.curveM2, self.curveM1, self.curveLorentz]
-            lined = dict()
-            
-            for legline, origline in zip(self.leg.get_lines(), lines):
-                legline.set_picker(5) 
-                lined[legline] = origline                
+        self.curveSpec, = self.ax2.loglog(freqs, emptyCurve, 'k', linewidth=1.5)
+        #curveM1A, = ax2.loglog(freqs, emptyCurve, 'r', linewidth=1.3, label='M1')
+        self.curveM2, = self.ax2.loglog(freqs, emptyCurve, c='r', lw=1.5, label='M2')
+        self.curveM1, = self.ax2.loglog(freqs, emptyCurve, c='g', lw=1.5, label='M2: Power Law')
+        self.curveLorentz, = self.ax2.loglog(freqs, emptyCurve, c='g', ls='--', lw=1.5, label='M2: Lorentzian')
+        
+        self.leg = self.ax2.legend(loc='lower left')
+        self.leg.get_frame().set_alpha(0.4)
+        
+        lines = [self.curveM2, self.curveM1, self.curveLorentz]
+        lined = dict()
+        
+        for legline, origline in zip(self.leg.get_lines(), lines):
+            legline.set_picker(5) 
+            lined[legline] = origline                
         
     def pre(self, event):
-        global l, c_m2, c_l2
-        global axsliders, fnsliders
+        global l
     
         if cp.plot_vers == 2:
             self.ax3.remove()
@@ -172,9 +152,7 @@ class cPlot(object):
                 for button in self.axbutton:
                     button.remove()
                 axslider.remove()
-            #functions.visual()
             fx.visual()
-            #self.ax2setup()
         
         if cp.plot_vers == 3:    
             self.ax4.remove()
@@ -184,14 +162,11 @@ class cPlot(object):
                 for button in self.axbutton:
                     button.remove()
                 axslider.remove()
-            #functions.visual()
             fx.visual()
             self.ax2setup()
     
         if cp.plot_vers != 1: 
             cp.plot_vers = 1
-     
-            emptyLine = [0 for i in range(len(freqs))]
             
             if 'ix' not in globals():
                 global ix, iy
@@ -199,62 +174,38 @@ class cPlot(object):
                 iy = spectra.shape[0]//2
                 
             spec = np.array(spectra[iy][ix])
-                
-            self.ax2_title.set_text('Pixel (%ix , %iy): Spectra' % (ix, iy))
-    
-            self.curveSpec.set_ydata(spec)
             
             self.ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
             
-            # load pixel model parameters, or middle of param bounds if no param file
-            if haveParam:
-                param = h_map[iy,ix,:6]
-            else:
-                global curveM2
-                param = (np.array(M2_low) + np.array(M2_high)) / 2
-                curveM2, = self.ax2.loglog(freqs, emptyLine, c='r', lw=1.5, label='M2')
+            self.ax2_title.set_text('Pixel (%ix , %iy): Spectra' % (ix, iy))
+            self.curveSpec.set_ydata(spec)
+        
+            param = fx.paramSliders()
             
-            s = M2(freqs, *param)
+            #s = M2(freqs, *param)
             
-            axsliders = []        
-            fnsliders = []
-            
-            # make parameter sliders
-            for i, M2_label in enumerate(M2_labels):
-                axsliders.append(plt.axes([0.15, 0.23-(0.04*i), 0.6, 0.02]))
-                fnsliders.append(Slider(axsliders[i], M2_label, M2_low[i], M2_high[i], param[i]))
-                fnsliders[i].on_changed(functions.update2)
-                fnsliders[i].valtext.set_text(text[i] % param[i])
-                
-            self.curveM2.set_ydata(s)
+            self.curveM2.set_ydata(M2(freqs, *param))
             #l, = ax2.loglog(freqs, s, lw=1.5, color='red')
-            c_m2, = self.ax2.loglog(freqs, emptyLine, 'b', linewidth=1.3, label='M2 - Lorentz')
-            c_l2, = self.ax2.loglog(freqs, emptyLine, 'b--', linewidth=1.3, label='Lorentz')
             
             plt.text(0.05, 11.5, "*Using parameters found in: '%s'" % param_dir)
-            
-            # add callbacks to each button - linking corresponding action
-            callback = functions()
             
             self.axreload = plt.axes([0.83, 0.18, 0.05, 0.05])
             self.axsaveFig = plt.axes([0.83, 0.11, 0.05, 0.05])
             self.axreset = plt.axes([0.83, 0.04, 0.05, 0.05])
             
             self.breload = Button(self.axreload, 'Reload')
-            self.breload.on_clicked(callback.reload)
+            self.breload.on_clicked(fx.reload)
             self.bsaveFig = Button(self.axsaveFig, 'Save')
-            self.bsaveFig.on_clicked(callback.saveFig)
+            self.bsaveFig.on_clicked(fx.saveFig)
             self.breset = Button(self.axreset, 'Reset')
-            self.breset.on_clicked(functions.reset)
+            self.breset.on_clicked(fx.reset)
             
     def timeSeries(self, event):
         global axslider, slid_mask
     
         if cp.plot_vers == 1:
-            for slider in axsliders:
+            for slider in fx.axsliders:
                 slider.remove()
-    
-            #l.remove()
             
         if cp.plot_vers == 2:  # maybe just: if cp.plot_vers != 2:
             pass
@@ -286,9 +237,7 @@ class cPlot(object):
             self.ax3.set_ylabel('Intensity', fontsize=fontSize, labelpad=5)
             self.ax3.set_xlim(timestamps[0]-0.01*t_range, timestamps[-1]+0.01*t_range) 
             
-            emptyLine2 = [-1 for i in range(len(timestamps))]
-            
-            self.ts, = self.ax3.plot(timestamps, emptyLine2, 'k')
+            self.ts, = self.ax3.plot(timestamps, emptyTimeseries, 'k')
             
             self.ax2setup()
        
@@ -300,7 +249,6 @@ class cPlot(object):
             spec = np.array(spectra[iy][ix])
                 
             self.ax2_title.set_text('Pixel (%ix , %iy): Spectra' % (ix, iy))
-            
             self.curveSpec.set_ydata(spec)
             
             if haveParam:
@@ -312,9 +260,6 @@ class cPlot(object):
                     self.axbutton.append(plt.axes([0.01+(0.06*i), 0.9, 0.05, 0.063]))
                 axslider = plt.axes([0.64, 0.915, 0.15, 0.03])
                 
-                # add callbacks to each button - linking corresponding action
-                callback = functions()
-                
                 #bFunctions = ['coeff', 'index', 'tail', 'lorentz_amp', 'lorentz_loc', 'lorentz_wid', 'fstat', 'visual', 'hist', 'mask']
                 
                 self.fnbutton = []
@@ -322,8 +267,8 @@ class cPlot(object):
                 bcount = 0
                 for button in buttons:
                     self.fnbutton.append(Button(self.axbutton[bcount], button))
-                    #fnbutton[bcount].on_clicked(eval('callback.%s' % bFunctions[bcount]))
-                    self.fnbutton[bcount].on_clicked(callback.ax_loc)
+                    #fnbutton[bcount].on_clicked(eval('fx.%s' % bFunctions[bcount]))
+                    self.fnbutton[bcount].on_clicked(fx.ax_loc)
                     bcount += 1
                     
                 slid_mask = Slider(axslider, 'Masking', 0.001, 0.1, valinit=0.005)
@@ -346,8 +291,8 @@ class cPlot(object):
             
             # ax4: displays spectra power maps
             self.ax4 = plt.subplot2grid((30,31),(4, 17), colspan=13, rowspan=16)
-            self.ax4.set_xlim(0, h_map.shape[1]-1)
-            self.ax4.set_ylim(0, h_map.shape[0]-1)  
+            self.ax4.set_xlim(0, spectra.shape[1]-1)
+            self.ax4.set_ylim(0, spectra.shape[0]-1)  
             self.ax4_title, = ([self.ax4.set_title(r'Period: %0.2f [min]' % 4., y = 1.01, fontsize=17)])
             
             idx = (np.abs(freqs - 1./(4*60))).argmin()
@@ -373,7 +318,68 @@ class cPlot(object):
 
 class functions():  
     ind = 0
-     
+    
+    ############# params ################
+    def reload(self, event):
+        #also needs to reset -- why does having 'event' here work?
+        global M1_low, M1_high, M2_low, M2_high
+        with open('specFit_config_test.yaml', 'r') as stream:
+            cfg = yaml.load(stream)
+        
+        M1_low = cfg['M1_low']
+        M1_high = cfg['M1_high']
+        M2_low = cfg['M2_low']
+        M2_high = cfg['M2_high']
+        
+        for slider in fx.axsliders:
+            slider.remove()
+        
+        param = fx.paramSliders()
+        
+    def saveFig(self, event):
+        print('save params')
+        
+    def reset(self, event):
+        for slider in fx.fnsliders:
+            slider.reset()
+            
+        params = [slider.val for slider in fx.fnsliders] 
+    
+        cp.curveM2.set_ydata(M2(freqs, *params))
+        
+    ## make definintion -- used 3 times (be careful as middle use has self.update2 vs functions.update2)
+    def paramSliders(self):
+        if haveParam:
+            param = h_map[iy,ix,:6]
+        else:
+            param = (np.array(M2_low) + np.array(M2_high)) / 2
+        
+        self.axsliders = []
+        self.fnsliders = []
+    
+        # make parameter sliders
+        for i, M2_label in enumerate(M2_labels):
+            self.axsliders.append(plt.axes([0.15, 0.23-(0.04*i), 0.6, 0.02]))
+            self.fnsliders.append(Slider(self.axsliders[i], M2_label, M2_low[i], M2_high[i], param[i]))
+            self.fnsliders[i].on_changed(functions.update2)
+            self.fnsliders[i].valtext.set_text(text[i] % param[i])
+        return param
+        
+    def update2(self):
+        params = np.zeros((len(fx.axsliders)))
+    
+        for i in range(len(fx.axsliders)):
+            params[i] = fx.fnsliders[i].val
+            fx.fnsliders[i].valtext.set_text(text[i] % params[i])
+         
+        cp.curveM2.set_ydata(M2(freqs, *params))
+        cp.curveM1.set_ydata(M1(freqs, *params[:3]))
+        cp.curveLorentz.set_ydata(m2(freqs, *params[3:6]))
+    ############# params ################    
+    
+        
+    
+    ############# timeseries / power-maps ################ 
     def ax_loc(self, event):
         # execute action based on button clicked
         for i in range(len(cp.axbutton)):
@@ -387,78 +393,6 @@ class functions():
                 else:
                     cp.marker = i
                     self.plotMap(cp.marker)
-        
-    def saveFig(self, event):
-        print('save params')
-        
-    def update2(self):
-        params = np.zeros((len(axsliders)))
-    
-        for i in range(len(axsliders)):
-            params[i] = fnsliders[i].val
-            fnsliders[i].valtext.set_text(text[i] % params[i])
-           
-        s = M2(freqs, *params)
-        
-        #l.set_ydata(s)
-        cp.curveM2.set_ydata(s)
-        cp.curveM1.set_ydata(M1(freqs, *params[:3]))
-        cp.curveLorentz.set_ydata(m2(freqs, *params[3:6]))
-        
-    def reset(self):
-        for slider in fnsliders:
-            slider.reset()
-        c_m2.set_ydata(emptyLine)
-        c_l2.set_ydata(emptyLine)
-        params = [slider.val for slider in fnsliders]
-        s = M2(freqs, *params)
-        
-        #l.set_ydata(s)
-        cp.curveM2.set_ydata(s)
-        
-    def reload(self, event):
-        #also needs to reset -- why does having 'event' here work?
-        global fnsliders, axsliders 
-        global M1_low, M1_high, M2_low, M2_high
-        with open('specFit_config_test.yaml', 'r') as stream:
-            cfg = yaml.load(stream)
-        
-        M1_low = cfg['M1_low']
-        M1_high = cfg['M1_high']
-        M2_low = cfg['M2_low']
-        M2_high = cfg['M2_high']
-        
-        for slider in axsliders:
-            slider.remove()
-        
-        if haveParam:
-            param = h_map[iy,ix,:6]
-        else:
-            param = (np.array(M2_low) + np.array(M2_high)) / 2
-            
-        axsliders = []
-        fnsliders = []
-        
-        # make parameter sliders
-        for i, M2_label in enumerate(M2_labels):
-            axsliders.append(plt.axes([0.15, 0.23-(0.04*i), 0.6, 0.02]))
-            fnsliders.append(Slider(axsliders[i], M2_label, M2_low[i], M2_high[i], param[i]))
-            fnsliders[i].on_changed(self.update2)
-            fnsliders[i].valtext.set_text(text[i] % param[i])
-    
-    def onpick(event):
-        # toggle the visibility/alpha of the selected line in the legend
-        if event.artist in lined:
-            legline = event.artist
-            origline = lined[legline]
-            visb = not origline.get_visible()
-            origline.set_visible(visb)
-            if visb:
-                legline.set_alpha(1.0)
-            else:
-                legline.set_alpha(0.2)
-            cp.fig1.canvas.draw()
-     
         
     def plotMap(self, p):
         param = h_map[:,:,p]
@@ -475,8 +409,7 @@ class functions():
         cp.im.set_cmap(c_map)
         
         cp.colorBar()
-      
-        
+           
     def plotMask(self, p):
         param = h_map[:,:,p]
         h_min, h_max = vminVmax(param)
@@ -521,26 +454,10 @@ class functions():
             self.plotMask(cp.marker)
         elif cp.mask_bool == 1:
             cp.mask_bool = 0
-            self.plotMap(cp.marker)              
-    
-    
+            self.plotMap(cp.marker)
+            
     def update(val):
         cp.mask_val = slid_mask.val
-    
-    def update3(self):
-        freq_val = cp.slid_freqs.val
-        cp.ax4_title.set_text('Period: %0.2f [min]' % freq_val)
-        
-        freq_val = 1./(freq_val*60)      
-        
-        idx = (np.abs(freqs - freq_val)).argmin()
-        
-        param = np.copy(spectra[:,:,idx])
-        h_min, h_max = vminVmax(param)
-        
-        cp.im2.set_data(param)
-        cp.im2.set_clim(h_min, h_max)
-        cp.colorBar2()
         
     def hist(self):
         if cp.spec_hist != 'hist':
@@ -576,14 +493,41 @@ class functions():
         cp.ax2.set_xlim(np.percentile(pNaN, 1), np.percentile(pNaN, 99))
         cp.ax2.set_ylim(0,10000)
         cp.leg.set_visible(False)
-        plt.draw()   
+        plt.draw()
+    ############# timeseries / power-maps ################     
     
-
-
-
     
+    ############# power-maps ################
+    def update3(self):
+        freq_val = cp.slid_freqs.val
+        cp.ax4_title.set_text('Period: %0.2f [min]' % freq_val)
         
+        freq_val = 1./(freq_val*60)      
         
+        idx = (np.abs(freqs - freq_val)).argmin()
+        
+        param = np.copy(spectra[:,:,idx])
+        h_min, h_max = vminVmax(param)
+        
+        cp.im2.set_data(param)
+        cp.im2.set_clim(h_min, h_max)
+        cp.colorBar2()
+    ############# power-maps ################
+    
+    def onpick(event):
+        # toggle the visibility/alpha of the selected line in the legend
+        if event.artist in lined:
+            legline = event.artist
+            origline = lined[legline]
+            visb = not origline.get_visible()
+            origline.set_visible(visb)
+            if visb:
+                legline.set_alpha(1.0)
+            else:
+                legline.set_alpha(0.2)
+            cp.fig1.canvas.draw()
+        
+            
 
 def specFit(s, ds):
     ## fit data to combined power law plus gaussian component model       
@@ -659,8 +603,8 @@ def specFit(s, ds):
 # select pixel in ax1
 def onclick(event):
     #global ix, iy
-    global fnsliders
-    global axsliders
+    #global fnsliders
+    #global axsliders
     ixx, iyy = event.xdata, event.ydata
     
     if event.inaxes == cp.ax1:
@@ -695,7 +639,8 @@ def onclick(event):
         cp.curveSpec.set_ydata(s)
     
         timeseries = np.array(imCube[iy+1][ix+1] / exposures)
-          
+        
+        # update spectra and timeseries
         if cp.plot_vers == 2:
             cp.ts.set_ydata(timeseries)  
             cp.ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1)  
@@ -704,27 +649,15 @@ def onclick(event):
                 cp.curveM2.set_ydata(M2(freqs, *h_map[iy,ix,:6]))
                 cp.curveM1.set_ydata(M1(freqs, *h_map[iy,ix,:3]))
                 cp.curveLorentz.set_ydata(m2(freqs, *h_map[iy,ix,3:6]))
-            
+        
+        # update spectra and model sliders
         if cp.plot_vers == 1:
             
-            for slider in axsliders:
+            for slider in fx.axsliders:
                 slider.remove()
             
-            if haveParam:
-                param = h_map[iy,ix,:6]
-            else:
-                param = (np.array(M2_low) + np.array(M2_high)) / 2
-                
-            axsliders = []
-            fnsliders = []
+            param = fx.paramSliders()
             
-            # make parameter sliders
-            for i, M2_label in enumerate(M2_labels):
-                axsliders.append(plt.axes([0.15, 0.23-(0.04*i), 0.6, 0.02]))
-                fnsliders.append(Slider(axsliders[i], M2_label, M2_low[i], M2_high[i], param[i]))
-                fnsliders[i].on_changed(functions.update2)
-                fnsliders[i].valtext.set_text(text[i] % param[i])
-                
             plt.text(0.05, 11.5, "*Using parameters found in: '%s'" % param_dir)
             
             s = M2(freqs, *param)
@@ -843,7 +776,8 @@ yspan = np.log10(np.percentile(spectra, 99.9)) - np.log10(np.percentile(spectra,
 ylow = 10**(np.log10(np.percentile(spectra, 0.1)) - (yspan/10))
 yhigh = 10**(np.log10(np.percentile(spectra, 99.9)) + (yspan/10))
 
-emptyLine = [0 for i in range(len(freqs))]
+emptyCurve = [0 for i in range(len(freqs))]
+emptyTimeseries = [-1 for i in range(len(timestamps))]
 
 
 #ax1.set_xticklabels(labels2int(ax1.get_xticks()))
