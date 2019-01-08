@@ -149,7 +149,8 @@ flist = sorted(glob.glob('%s/aia*.fits' % raw_dir))
 
 if Nfiles != "all":
     flist = flist[0:int(Nfiles)]
-
+# TODO: if files not found, add in system.exit()
+    
 nf = len(flist)
 
 # Select the middle image, to derotate around
@@ -164,7 +165,9 @@ mapF = Map(flist[-1])
 
 mc_shifts.append(mapI)
 mc_shifts.append(mapF)
-new_mapcube1 = Map(mc_shifts, cube=True)
+#new_mapcube1 = Map(mc_shifts, cube=True)
+new_mapcube1 = Map(mc_shifts, sequence=True)
+
 shifts = calculate_solar_rotate_shift(new_mapcube1, layer_index=0)
 
 # compute longitude / latitude shift over timespan

@@ -148,13 +148,19 @@ if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
 
-if mmap_datacube == True:
-    cube = np.load('%s/dataCube.npy' % processed_dir, mmap_mode='r')
-else: 
-    cube = np.load('%s/dataCube.npy' % processed_dir)
-
-timestamp = np.load('%s/timestamps.npy' % processed_dir)
-exposure = np.load('%s/exposures.npy' % processed_dir)
+try:
+    if mmap_datacube == True:
+        cube = np.load('%s/dataCube.npy' % processed_dir, mmap_mode='r')
+    else: 
+        cube = np.load('%s/dataCube.npy' % processed_dir)
+    
+    timestamp = np.load('%s/timestamps.npy' % processed_dir)
+    exposure = np.load('%s/exposures.npy' % processed_dir)
+    vis0 = np.load('%s/visual.npy' % processed_dir)
+except FileNotFoundError: 
+    if rank == 0:
+        sys.exit("Files not found.  Exiting...")
+    else: sys.exit()
 
 ## trim top/bottom rows of cube so it divides cleanly by the # of processors
 trim_top = int(np.floor((cube.shape[0] % size) / 2))
@@ -164,7 +170,6 @@ trim_bot = -int(np.ceil((cube.shape[0] % size) / 2))
 box_trim = ((box_avg_size-1)//2)  
 
 if rank == 0:
-    vis0 = np.load('%s/visual.npy' % processed_dir)
     vis = vis0[trim_top+box_trim:vis0.shape[0]+trim_bot-box_trim, box_trim:vis0.shape[1]-box_trim]
     np.save('%s/visual.npy' % processed_dir, vis)
 

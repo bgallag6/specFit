@@ -41,7 +41,6 @@ config = args.config
 with open(config, 'r') as stream:
     cfg = yaml.load(stream)
 
-wavelength = cfg['wavelength']
 M1_low = cfg['M1_low']
 M1_high = cfg['M1_high']
 M2_low = cfg['M2_low']
@@ -63,13 +62,13 @@ def specFit( subcube, subcube_StdDev ):
         f = freqs
         s = subcube[l][m]
         
-        # use pixel-box std.dev. or adhoc method as fitting uncertainties
+        # ---- use pixel-box std.dev. or adhoc method as fitting uncertainties
         if spec_unc == 'stddev':
             ds = subcube_StdDev[l][m]     
         elif spec_unc in ['adhoc', 'constant']:
             ds = subcube_StdDev
                                      
-        ### fit models to spectra using SciPy's Levenberg-Marquart method
+        # ---- fit models to spectra using SciPy's Levenberg-Marquart method
         try:
             m1_param = Fit(M1, f, s, p0=M1_guess, bounds=(M1_low, M1_high), 
                            sigma=ds, method='dogbox')[0]
@@ -77,7 +76,7 @@ def specFit( subcube, subcube_StdDev ):
         except RuntimeError: pass
         except ValueError: pass
         
-        # first fit M2 model using 'dogbox' method          
+        # ---- first fit M2 model using 'dogbox' method          
         try:                                           
             m2_param0 = Fit(M2, f, s, p0=M2_guess, bounds=(M2_low, M2_high), 
                             sigma=ds, method='dogbox', max_nfev=3000)[0]
@@ -86,7 +85,7 @@ def specFit( subcube, subcube_StdDev ):
         except ValueError: pass
         
         
-        # next fit M2 model using default 'trf' method
+        # ---- next fit M2 model using default 'trf' method
         try:            
             m2_param = Fit(M2, f, s, p0=m2_param0, bounds=(M2_low, M2_high), 
                            sigma=ds, max_nfev=3000)[0]
@@ -94,7 +93,7 @@ def specFit( subcube, subcube_StdDev ):
         except RuntimeError: pass
         except ValueError: pass
                        
-        # create model functions from fitted parameters
+        # ---- create model functions from fitted parameters
         m1_fit = M1(f, *m1_param)        
         m2_fit = M2(f, *m2_param)      
         
@@ -110,8 +109,7 @@ def specFit( subcube, subcube_StdDev ):
         
         f_test = ((chisqrM1-chisqrM2)/(6-3))/((chisqrM2)/(f.size-6))
         
-        # extract the lorentzian-amplitude scaling factor
-        #amp_scale = P22 / M1(np.exp(fp22), A22, n22, C22)  
+        # ---- extract the lorentzian-amplitude scaling factor  
         amp_scale = m2_param[3] / M1(np.exp(m2_param[4]), *m2_param[:3])
         
         
@@ -129,7 +127,7 @@ def specFit( subcube, subcube_StdDev ):
             params[l][m][8] = redchisqrM1
         
         
-    # estimate time remaining and print to screen
+    # ---- estimate time remaining and print to screen
     T = timer()
     T2 = T - T1
     if l == 0:
@@ -146,7 +144,7 @@ def specFit( subcube, subcube_StdDev ):
           (rank, l, subcube.shape[0], T_hr, T_min, T_sec), flush=True)
     T1 = T
 
-  # print estimated and total program time to screen        
+  # ---- print estimated and total program time to screen        
   print("Beginning est. time = %i:%.2i:%.2i" % start_time, flush=True)
   T_act = timer() - start_sub
   T_min, T_sec = divmod(T_act, 60)
@@ -181,51 +179,47 @@ if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
 
-if mmap_spectra == True:
-    # load memory-mapped array as read-only
-    cube = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
-    if haveUnc:
-        cube_StdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
-else:
-    cube = np.load('%s/specCube.npy' % processed_dir)
-    if haveUnc:
-        cube_StdDev = np.load('%s/specUnc.npy' % processed_dir)
-
-freqs = np.load('%s/frequencies.npy' % processed_dir)
-
-# assign equal weights to all parts of curve & use as fitting uncertainties
+try:
+    if mmap_spectra == True:
+        # load memory-mapped array as read-only
+        cube = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
+        if haveUnc:
+            cube_StdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
+    else:
+        cube = np.load('%s/specCube.npy' % processed_dir)
+        if haveUnc:
+            cube_StdDev = np.load('%s/specUnc.npy' % processed_dir)
+    
+    freqs = np.load('%s/frequencies.npy' % processed_dir)
+except FileNotFoundError: 
+    if rank == 0:
+        sys.exit("Files not found.  Exiting...")
+    else: sys.exit()
+    
+# ---- assign equal weights to all parts of curve & use as fitting uncertainties
 df = np.log10(freqs[1:len(freqs)]) - np.log10(freqs[0:len(freqs)-1])
-df2 = np.zeros_like(freqs)
-df2[0:len(df)] = df
-df2[len(df2)-1] = df2[len(df2)-2]
-ds = df2
+ds = np.append(df, df[-1])
 
-# Split the data based on no. of processors
-#chunks = np.array_split(cube, size)
-#chunks_StdDev = np.array_split(cube_StdDev, size)
-            
-#subcube = chunks[rank]
+# ---- Split the data based on no. of processors
 subcube = np.array_split(cube, size)[rank]
 
 if spec_unc == 'stddev':
-    #subcube_StdDev = chunks_StdDev[rank]
     subcube_StdDev = np.array_split(cube_StdDev, size)[rank]
 elif spec_unc == 'adhoc':
     subcube_StdDev = ds
 elif spec_unc == 'constant':
     subcube_StdDev = np.ones_like(cube[0][0])
 
-# verify each processor received subcube with correct dimensions
+# verify each processor received subcube with correct dimensions (assert?)
 ss = np.shape(subcube)
 print("Processor", rank, "received an array with dimensions", ss, flush=True)
 
 params_T = specFit( subcube, subcube_StdDev )
 
 if havempi:
-    # Gather all the results
-    newData_p = comm.gather(params_T, root=0)
+    newData_p = comm.gather(params_T, root=0)  # gather all results
 
-# Have one node stack the results
+# ---- Have one node stack the results
 if rank == 0:
     if havempi:
         stack_p = np.vstack(newData_p)
@@ -237,7 +231,6 @@ if rank == 0:
     T_min_final, T_sec_final = divmod(T_final, 60)
     T_hr_final, T_min_final = divmod(T_min_final, 60)
     print("Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)   
-    #print("Just finished region: %s %iA" % (date, wavelength), flush=True)
   
     print("Saving files...", flush=True)
     np.save('%s/param.npy' % processed_dir, stack_p)
@@ -246,7 +239,6 @@ if rank == 0:
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
     scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
   
-    #with open('%s_%i_region_details.txt' % (date, wavelength), 'w') as file:
     with open('log.txt', 'a+') as file:
         file.write("%s: Spectra Fitting" % scriptName + "\n")
         file.write("------------------------" + "\n")
