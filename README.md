@@ -53,6 +53,6 @@ To explore the `specVis` utility without having to first execute the main progra
 python specVis.py --raw_dir ./images/validation/Processed/20120606/1600 --processed_dir ./images/validation/Processed/20120606/1600
 ```
 
-## 3. Contact
+## 4. Contact
 
-Brendan Gallagher <bgallag6@masonlive.gmu.edu>
+Brendan Gallagher: <bgallag6@masonlive.gmu.edu>
