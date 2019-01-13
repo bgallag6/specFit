@@ -17,6 +17,9 @@ Created on Thu Nov 15 19:48:30 2018
     - self.fig.canvas.draw_idle()
     - have where if press mask and ax2=hist, updates hist (overplot or plot new)
     - maybe don't change hist limits when changing from mask--nomask
+- maybe have start with 3 models showing
+- when dont have speccube, maybe dont show power-map button
+- maybe make powermap clearer: not create ax2 only to delete it?
 """
 
 import matplotlib.pyplot as plt
@@ -69,12 +72,15 @@ class cPlot(object):
         
         # (3) main program options -- buttons in top right
         self.axpre = plt.axes([0.82, 0.93, 0.045, 0.045])
-        self.axpost = plt.axes([0.88, 0.93, 0.045, 0.045])
-        self.axpower = plt.axes([0.94, 0.93, 0.045, 0.045])
         self.bpre = Button(self.axpre, 'Show\nParameters')
         self.bpre.on_clicked(self.pre)
-        self.bpost = Button(self.axpost, 'Show\nTimeseries')
-        self.bpost.on_clicked(self.timeSeries)
+        
+        if haveImCube:
+            self.axpost = plt.axes([0.88, 0.93, 0.045, 0.045])
+            self.bpost = Button(self.axpost, 'Show\nTimeseries')
+            self.bpost.on_clicked(self.timeSeries)
+        
+        self.axpower = plt.axes([0.94, 0.93, 0.045, 0.045])
         self.bpower = Button(self.axpower, 'Show\nPowermaps')
         self.bpower.on_clicked(self.powerMap)
         
@@ -109,6 +115,39 @@ class cPlot(object):
         self.cbar1.ax.tick_params(labelsize=13, pad=3)   
         
         self.ax2setup()
+        
+        if haveParam:
+            self.axbutton = []
+            
+            # make toggle buttons to display each parameter's heatmap
+            #axspace = (0.6-(0.01*len(buttons)))/len(buttons)
+            for i in range(len(buttons)):
+                self.axbutton.append(plt.axes([0.01+(0.06*i), 0.93, 0.05, 0.045]))
+            self.axslider = plt.axes([0.64, 0.935, 0.15, 0.03])
+            
+            #bFunctions = ['coeff', 'index', 'tail', 'lorentz_amp', 'lorentz_loc', 'lorentz_wid', 'fstat', 'visual', 'hist', 'mask']
+            
+            self.fnbutton = []
+            
+            bcount = 0  # use enumerate
+            for button in buttons:
+                self.fnbutton.append(Button(self.axbutton[bcount], button))
+                #fnbutton[bcount].on_clicked(eval('fx.%s' % bFunctions[bcount]))
+                self.fnbutton[bcount].on_clicked(fx.ax_loc)
+                bcount += 1
+                
+            self.axauto = plt.axes([0.57, 0.93, 0.03, 0.045])
+            self.rauto = RadioButtons(self.axauto, ('Off', 'On'))
+            self.rauto.on_clicked(fx.maskOnOff)
+            self.mask_text = self.fig1.text(0.575, 0.98, 'Mask')    
+            
+            #slid_mask = Slider(self.axslider, 'P-Value', 0.001, 0.1, valinit=0.005)
+            slid_mask = Slider(self.axslider, '', 0.001, 0.1, valinit=0.005)
+            slid_mask.on_changed(functions.update)
+            slid_mask_text = self.fig1.text(0.70, 0.97, 'P-Value')
+            
+            self.fig1.canvas.mpl_connect('button_press_event', onclick)
+    
     
     def colorBar(self):
         # update heatmap colorbar
@@ -160,26 +199,14 @@ class cPlot(object):
         global l
     
         if cp.plot_vers == 2:
-            self.ax3.remove()
-            if haveParam:
-                for button in self.axbutton:
-                    button.remove()
-                self.axslider.remove()
-                self.axauto.remove()
-                self.mask_text.remove()
-            fx.visual()
+            if haveImCube: self.ax3.remove()
+            #fx.visual()
         
         if cp.plot_vers == 3:    
             self.ax4.remove()
             self.cbar2.remove()
             self.axslider2.remove()
-            if haveParam:
-                for button in self.axbutton:
-                    button.remove()
-                self.axslider.remove()
-                self.axauto.remove()
-                self.mask_text.remove()
-            fx.visual()
+            #fx.visual()
             self.ax2setup()
     
         if cp.plot_vers != 1: 
@@ -202,6 +229,8 @@ class cPlot(object):
             #s = M2(freqs, *param)
             
             self.curveM2.set_ydata(M2(freqs, *param))
+            self.curveM1.set_ydata(M1(freqs, *param[:3]))
+            self.curveLorentz.set_ydata(m2(freqs, *param[3:6]))
             #l, = ax2.loglog(freqs, s, lw=1.5, color='red')
             
             plt.text(0.05, 11.5, "*Using parameters found in: '%s'" % param_dir)
@@ -223,22 +252,17 @@ class cPlot(object):
         if cp.plot_vers == 1:
             for slider in fx.axsliders:
                 slider.remove()
+            for axesObj in [self.axreload, self.axsaveFig, self.axreset]:
+                axesObj.remove()
             
-        if cp.plot_vers == 2:  # maybe just: if cp.plot_vers != 2:
-            pass
-        
+        if cp.plot_vers == 2:  pass  # maybe just: if cp.plot_vers != 2:
+
         else:  
             if cp.plot_vers == 3:
                 self.ax4.remove()
                 self.cbar2.remove()
                 self.axslider2.remove()
-                if haveParam:
-                    for button in self.axbutton:
-                        button.remove()
-                    self.axslider.remove()
-                    self.axauto.remove()
-                    self.mask_text.remove()
-                fx.visual()
+                #fx.visual()
             
             cp.plot_vers = 2
             
@@ -249,21 +273,22 @@ class cPlot(object):
             
             self.ax1.scatter(ix, iy, s=200, marker='x', c='white', linewidth=2.5)
             
-            # ax3: displays pixel timeseries
-            self.ax3 = plt.subplot2grid((31,31),(22, 1), colspan=29, rowspan=8)
-            self.ax3_title = self.ax3.set_title('Pixel (%ix , %iy): Timeseries' % (ix, iy), fontsize=fontSize)
-            self.ax3.set_xlabel('Time', fontsize=fontSize, labelpad=5)
-            self.ax3.set_ylabel('Intensity', fontsize=fontSize, labelpad=5)
-            self.ax3.set_xlim(timestamps[0]-0.01*t_range, timestamps[-1]+0.01*t_range) 
-            
-            self.ts, = self.ax3.plot(timestamps, emptyTimeseries, 'k')
-            
             self.ax2setup()
-       
-            timeseries = np.array(imCube[iy+1][ix+1] / exposures)
-              
-            self.ts.set_ydata(timeseries)  
-            self.ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1) 
+            
+            if haveImCube:
+                # ax3: displays pixel timeseries
+                self.ax3 = plt.subplot2grid((31,31),(22, 1), colspan=29, rowspan=8)
+                self.ax3_title = self.ax3.set_title('Pixel (%ix , %iy): Timeseries' % (ix, iy), fontsize=fontSize)
+                self.ax3.set_xlabel('Time', fontsize=fontSize, labelpad=5)
+                self.ax3.set_ylabel('Intensity', fontsize=fontSize, labelpad=5)
+                self.ax3.set_xlim(timestamps[0]-0.01*t_range, timestamps[-1]+0.01*t_range) 
+                
+                self.ts, = self.ax3.plot(timestamps, emptyTimeseries, 'k')
+                
+                timeseries = np.array(imCube[iy+1][ix+1] / exposures)
+                  
+                self.ts.set_ydata(timeseries)  
+                self.ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1) 
                 
             spec = np.array(spectra[iy][ix])
                 
@@ -271,45 +296,18 @@ class cPlot(object):
             self.curveSpec.set_ydata(spec)
             
             if haveParam:
-                self.axbutton = []
-                
-                # make toggle buttons to display each parameter's heatmap
-                #axspace = (0.6-(0.01*len(buttons)))/len(buttons)
-                for i in range(len(buttons)):
-                    self.axbutton.append(plt.axes([0.01+(0.06*i), 0.93, 0.05, 0.045]))
-                self.axslider = plt.axes([0.64, 0.935, 0.15, 0.03])
-                
-                #bFunctions = ['coeff', 'index', 'tail', 'lorentz_amp', 'lorentz_loc', 'lorentz_wid', 'fstat', 'visual', 'hist', 'mask']
-                
-                self.fnbutton = []
-                
-                bcount = 0  # use enumerate
-                for button in buttons:
-                    self.fnbutton.append(Button(self.axbutton[bcount], button))
-                    #fnbutton[bcount].on_clicked(eval('fx.%s' % bFunctions[bcount]))
-                    self.fnbutton[bcount].on_clicked(fx.ax_loc)
-                    bcount += 1
-                    
-                self.axauto = plt.axes([0.57, 0.93, 0.03, 0.045])
-                self.rauto = RadioButtons(self.axauto, ('Off', 'On'))
-                self.rauto.on_clicked(fx.maskOnOff)
-                self.mask_text = self.fig1.text(0.575, 0.98, 'Mask')    
-                
-                #slid_mask = Slider(self.axslider, 'P-Value', 0.001, 0.1, valinit=0.005)
-                slid_mask = Slider(self.axslider, '', 0.001, 0.1, valinit=0.005)
-                slid_mask.on_changed(functions.update)
-                slid_mask_text = self.fig1.text(0.70, 0.97, 'P-Value')
-                
-                self.fig1.canvas.mpl_connect('button_press_event', onclick)   
-    
-    
+                cp.curveM2.set_ydata(M2(freqs, *h_map[iy,ix,:6]))
+                cp.curveM1.set_ydata(M1(freqs, *h_map[iy,ix,:3]))
+                cp.curveLorentz.set_ydata(m2(freqs, *h_map[iy,ix,3:6]))
+            
+                   
     def powerMap(self, event):
         
         if cp.plot_vers != 3:
             if cp.plot_vers != 2:
                 self.timeSeries(event)
              
-            self.ax3.remove()
+            if haveImCube: self.ax3.remove()
             self.ax2.remove()
         
             cp.plot_vers = 3    
@@ -423,39 +421,31 @@ class functions():
             c_map = 'jet_r'
         else:
             c_map = 'jet'
-
-        cp.ax1_title.set_text(r'%s' % titles[p])
-        cp.im.set_data(param)
-        cp.im.set_clim(h_min, h_max)
-        cp.im.set_cmap(c_map)
-        
-        cp.colorBar()
-           
-    def plotMask(self, p):
-        param = h_map[:,:,p]
-        h_min, h_max = vminVmax(param)
-        
-        # generate p-value heatmap + masked Lorentzian component heatmaps
-        dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
-        p_val = ff.sf(h_map[:,:,6], dof1, dof2)
-        p_val[np.isnan(p_val)] = 1
-        param_mask = np.copy(param) 
-        param_mask[p_val > cp.mask_val] = np.NaN
-        
-        # determine percentage of region masked 
-        count = np.count_nonzero(np.isnan(param_mask))   
-        total_pix = p_val.shape[0]*p_val.shape[1]
-        mask_percent = ((np.float(count))/total_pix)*100
-        
-        if p == 4:
-            c_map = 'jet_r'
-        else:
-            c_map = 'jet'
             
-        cp.ax1_title.set_text(r'%s | $f_{masked}$ = %0.1f%s' % (titles[p], mask_percent, '%'))
-        cp.im.set_data(param_mask)
+        if cp.mask_bool:
+            # generate p-value heatmap + masked Lorentzian component heatmaps
+            dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
+            p_val = ff.sf(h_map[:,:,6], dof1, dof2)
+            p_val[np.isnan(p_val)] = 1
+            param_mask = np.copy(param) 
+            param_mask[p_val > cp.mask_val] = np.NaN
+            
+            # determine percentage of region masked 
+            count = np.count_nonzero(np.isnan(param_mask))   
+            total_pix = p_val.shape[0]*p_val.shape[1]
+            mask_percent = ((np.float(count))/total_pix)*100
+            cp.ax1_title.set_text(r'%s | $f_{masked}$ = %0.1f%s' % (titles[p], mask_percent, '%'))
+            cp.im.set_data(param_mask)
+        
+        elif not cp.mask_bool:
+            cp.ax1_title.set_text(r'%s' % titles[p])
+            cp.im.set_data(param)
+            
         cp.im.set_clim(h_min, h_max)
         cp.im.set_cmap(c_map)
+        
+        if cp.spec_hist == 'hist':
+            self.hist()
         
         cp.colorBar()
     
@@ -468,33 +458,13 @@ class functions():
         cp.im.set_clim(h_min, h_max)
         cp.im.set_cmap('sdoaia%i' % wavelength)
         cp.colorBar()
-        
-    def mask(self):
-        if not cp.mask_bool:
-            cp.mask_bool = True
-            self.plotMask(cp.marker)
-        elif cp.mask_bool == True:
-            cp.mask_bool = False
-            self.plotMap(cp.marker)
+
             
     def maskOnOff(self, label):
         label_dict = {'On': True, 'Off': False}
         cp.mask_bool = label_dict[label]
-        if cp.mask_bool:
-            self.plotMask(cp.marker)
-        elif not cp.mask_bool:
-            self.plotMap(cp.marker)
+        self.plotMap(cp.marker)
             
-    def maskOn(self):
-        if not cp.mask_bool:
-            cp.mask_bool = True
-            self.plotMask(cp.marker)
-            
-    def maskOff(self):
-        if cp.mask_bool:
-            cp.mask_bool = False
-            self.plotMap(cp.marker)
-     
         
     def update(val):
         cp.mask_val = slid_mask.val
@@ -644,8 +614,6 @@ def specFit(s, ds):
 # select pixel in ax1
 def onclick(event):
     #global ix, iy
-    #global fnsliders
-    #global axsliders
     ixx, iyy = event.xdata, event.ydata
     
     if event.inaxes == cp.ax1:
@@ -678,14 +646,14 @@ def onclick(event):
         cp.ax2_title.set_text('Pixel (%ix , %iy): Spectra' % (ix, iy))
 
         cp.curveSpec.set_ydata(s)
-    
-        timeseries = np.array(imCube[iy+1][ix+1] / exposures)
         
         # update spectra and timeseries
         if cp.plot_vers == 2:
-            cp.ts.set_ydata(timeseries)  
-            cp.ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1)  
-            cp.ax3_title.set_text('Pixel (%ix , %iy): Timeseries' % (ix, iy))
+            if haveImCube:
+                timeseries = np.array(imCube[iy+1][ix+1] / exposures)
+                cp.ts.set_ydata(timeseries)  
+                cp.ax3.set_ylim(timeseries.min()*0.9, timeseries.max()*1.1)  
+                cp.ax3_title.set_text('Pixel (%ix , %iy): Timeseries' % (ix, iy))
             if haveParam:
                 cp.curveM2.set_ydata(M2(freqs, *h_map[iy,ix,:6]))
                 cp.curveM1.set_ydata(M1(freqs, *h_map[iy,ix,:3]))
@@ -729,10 +697,10 @@ def labels2int(labels):
 #raw_dir = 'C:/Users/Brendan/Desktop/specFit/images/raw/20120606/1600/fits/'
 #processed_dir = '/Users/bgallagher/Documents/SDO/DATA/20120702/1700'
 #raw_dir = '/Users/bgallagher/Documents/SDO/FITS/20120702/1700'
-processed_dir = '/Users/bgallagher/Documents/External_Transfer/20120308_1700'
-raw_dir = '/Users/bgallagher/Documents/External_Transfer/FITS'
+#processed_dir = '/Users/bgallagher/Documents/External_Transfer/20120308_1700'
+#raw_dir = '/Users/bgallagher/Documents/External_Transfer/FITS'
 
-#print("Starting specVis...", flush=True)
+print("Starting specVis...", flush=True)
 
 plt.rcParams["font.family"] = "Times New Roman"
 #plt.rcParams["font.size"] = 15
@@ -762,12 +730,19 @@ titles = map_titles + ['F-Statistic', 'Averaged Visual Image']
 buttons = M2_labels + ['F-Stat', 'Visual', 'Hist.']
 
 global spectra
+haveImCube = False
 
 if mmap_spectra == True:
     # load memory-mapped array as read-only
     spectra = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
     stdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
-    imCube = np.load('%s/dataCube.npy' % processed_dir, mmap_mode='r')
+    if os.path.isfile('%s/dataCube.npy' % processed_dir):
+        imCube = np.load('%s/dataCube.npy' % processed_dir, mmap_mode='r')
+        haveImCube = True
+        timestamps = np.load('%s/timestamps.npy' % processed_dir)
+        emptyTimeseries = [-1 for i in range(len(timestamps))]
+        t_range = timestamps[-1]-timestamps[0]
+        exposures = np.load('%s/exposures.npy' % processed_dir)
 else:
     spectra = np.load('%s/specCube.npy' % processed_dir)
     stdDev = np.load('%s/specUnc.npy' % processed_dir)
@@ -775,15 +750,14 @@ else:
  
 vis = np.load('%s/visual.npy' % processed_dir)
 
-timestamps = np.load('%s/timestamps.npy' % processed_dir)
-exposures = np.load('%s/exposures.npy' % processed_dir)
+
 
 haveParam = False
 if os.path.isfile('%s/param.npy' % processed_dir):
     h_map = np.load('%s/param.npy' % processed_dir)
     #h_map[:,:,4] = (1./(np.exp(h_map[:,:,4]))/60.)
     haveParam = True
-    param_dir = './%s/param.npy' % processed_dir
+    param_dir = '%s/param.npy' % processed_dir
 else:
     param_dir = './specFit_config.yaml'
           
@@ -823,7 +797,7 @@ ylow = 10**(np.log10(np.percentile(spectra, 0.1)) - (yspan/10))
 yhigh = 10**(np.log10(np.percentile(spectra, 99.9)) + (yspan/10))
 
 emptyCurve = [0 for i in range(len(freqs))]
-emptyTimeseries = [-1 for i in range(len(timestamps))]
+
 
 
 #ax1.set_xticklabels(labels2int(ax1.get_xticks()))
@@ -842,8 +816,6 @@ if param.size <= 100:
 """    
 #ax1.set_xlim(-0.5, param.shape[1]-0.5)
 #ax1.set_ylim(-0.5, param.shape[0]-0.5)     
-
-t_range = timestamps[-1]-timestamps[0]
 
 fx = functions()
 cp = cPlot()
