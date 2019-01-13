@@ -30,14 +30,14 @@ pip install sunpy && make fits
 If `mpiexec` is installed, some of the code runs in parallel using all available processors. To force usage of only one processor, use
 
 ```
-make tiff N=1
+make jpg N=1
 # or
 make fits N=1
 ```
 
 ## 2. Using your own data
 
-To use this library, a pre-processing program must create `dataCube.npy`, `timestamps.npy`, and `exposures.npy`. It is suggested that a user starts by modifying `preProcessDemo.py`, which generates test TIFF files and then creates the needed `.npy` files. After modifying this file, all of the processing steps can be executed using
+To use this library, a pre-processing program must create `dataCube.npy`, `timestamps.npy`, and `exposures.npy`. It is suggested that a user starts by modifying `preProcessDemo.py`, which generates test JPG files and then creates the needed `.npy` files. After modifying this file, all of the processing steps can be executed using
 
 ```
 make demo
@@ -47,14 +47,10 @@ Edit `Makefile` to see the system commands that are executed.
 
 ## 3. specVis
 
-To explore the `specVis` utility without having to first execute the main program, the user can edit the `specFit_config.yaml` file to read:
-```
-specVis_dir: "./test/validation/Processed/20120606/1600"
-```
-`specVis` can then be run using
+To explore the `specVis` utility without having to first execute the main program, the user can execute:
 
 ```
-python specVis.py
+python specVis.py --raw_dir ./images/validation/Processed/20120606/1600 --processed_dir ./images/validation/Processed/20120606/1600
 ```
 
 ## 3. Contact
