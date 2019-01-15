@@ -107,14 +107,15 @@ def datacube(flist_chunk):
               (rank, count, nf1, T_hr, T_min, T_sec), flush=True)
         T1 = T
     
-    dCube_trim = dCube[diffLatPix:-diffLatPix, xminI:-xminF]
+    # ---- trim dataCube and visual image
+    dCube = dCube[diffLatPix:-diffLatPix, xminI:-xminF]
     visAvg = visAvg[diffLatPix:-diffLatPix, xminI:-xminF]
 
-    np.save('%s/chunk_%i_of_%i' % (processed_dir, rank+1, size), dCube_trim)
+    np.save('%s/chunk_%i_of_%i' % (processed_dir, rank+1, size), dCube)
     
     print('Processor: %i, Dimension Errors: %i' % (rank+1, dimCount), flush=True)
     
-    #return dCube_trim
+    #return dCube
     return exposure, timestamp, visAvg
 
 ##############################################################################
@@ -204,12 +205,10 @@ xminindF = np.argmin(diffMapF.data, axis=1)[diffLatPix:-diffLatPix]
 xminI = mapShape[1] - np.min(xminindI)  
 xminF = mapShape[1] - np.min(xminindF)
 
-
-## split data and send to processors 
-chunks = np.array_split(flist, size)
+del new_mapcube1, mc_shifts, diffMapI, diffMapF
 
 # specify which chunks should be handled by each processor
-subcube = chunks[rank]
+subcube = np.array_split(flist, size)[rank]
 
 start = timer()
 
