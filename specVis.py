@@ -20,6 +20,9 @@ Created on Thu Nov 15 19:48:30 2018
 - maybe have start with 3 models showing
 - when dont have speccube, maybe dont show power-map button
 - maybe make powermap clearer: not create ax2 only to delete it?
+- when have powermaps displayed, when click on pixel - spectra comes up
+- possibly have histogram use subregion?
+- fix where histogram bins get messed up when switching between heatmaps (all stay plotted?)
 """
 
 import matplotlib.pyplot as plt
@@ -465,29 +468,31 @@ class functions():
         cp.mask_bool = label_dict[label]
         self.plotMap(cp.marker)
             
-        
+    # change to cp.slid_mask.val    
     def update(val):
         cp.mask_val = slid_mask.val
         
     def hist(self):
         if cp.spec_hist != 'hist':
-                cp.ax2.set_yscale('linear')
-                cp.ax2.set_xscale('linear')
-                cp.curveSpec.remove()
-                cp.curveM2.remove()
-                cp.curveM1.remove()
-                cp.curveLorentz.remove()
-                cp.spec_hist = 'hist'
-                cp.ax2.set_ylabel('Count')
+            cp.ax2.set_yscale('linear')
+            cp.ax2.set_xscale('linear')
+            cp.curveSpec.remove()
+            cp.curveM2.remove()
+            cp.curveM1.remove()
+            cp.curveLorentz.remove()
+            cp.spec_hist = 'hist'
+            cp.ax2.set_ylabel('Count')
                 
         param = h_map[:,:,cp.marker]      
         
         if not cp.mask_bool:
             cp.ax2_title.set_text('Histogram: %s' % titles[cp.marker])
             pflat = param.flatten()
+            h_color = 'black'
             
         elif cp.mask_bool:    
             cp.ax2_title.set_text('Histogram: %s | Masked' % titles[cp.marker])
+            h_color = 'red'
             
             # ---- generate p-value heatmap + masked Lorentzian component heatmaps
             dof1, dof2 = 3, 6  # degrees of freedom for model M1, M2
@@ -499,7 +504,7 @@ class functions():
             pflat = pflat[pflat != 0]
                  
         pNaN = pflat[~np.isnan(pflat)]
-        y, x, _ = cp.ax2.hist(pNaN, bins=25, edgecolor='black', alpha=0.75)  # need a set_data
+        y, x, _ = cp.ax2.hist(pNaN, bins=25, edgecolor='black', alpha=0.75, color=h_color)  # need a set_data
         cp.ax2.set_xlabel('%s' % titles[cp.marker])
         cp.ax2.set_xlim(np.percentile(pNaN, 1), np.percentile(pNaN, 99))
         cp.ax2.set_ylim(0, y.max()*1.1)
