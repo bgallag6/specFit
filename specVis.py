@@ -418,12 +418,18 @@ class functions():
         
     def plotMap(self, p):
         param = h_map[:,:,p]
-        h_min, h_max = vminVmax(param)
 
         if p == 4:
             c_map = 'jet_r'
         else:
             c_map = 'jet'
+            
+        if p == 4:
+            param = (1./np.exp(param))/60.
+        elif p == 5:
+            param = (1. / (np.exp(h_map[:,:,4]+h_map[:,:,5]) - np.exp(h_map[:,:,4]-h_map[:,:,5])))/60.
+            
+        h_min, h_max = vminVmax(param)
             
         if cp.mask_bool:
             # generate p-value heatmap + masked Lorentzian component heatmaps
@@ -484,6 +490,11 @@ class functions():
             cp.ax2.set_ylabel('Count')
                 
         param = h_map[:,:,cp.marker]      
+        
+        if cp.marker == 4:
+            param = (1./np.exp(param))/60.
+        elif cp.marker == 5:
+            param = (1. / (np.exp(h_map[:,:,4]+h_map[:,:,5]) - np.exp(h_map[:,:,4]-h_map[:,:,5])))/60.
         
         if not cp.mask_bool:
             cp.ax2_title.set_text('Histogram: %s' % titles[cp.marker])
