@@ -128,7 +128,12 @@ else:
   comm = None
   rank = 0
   size = 1
-  
+
+if int(sys.version[0]) != 3:
+    if rank == 0:
+        sys.exit("Please use Python 3")
+    else:
+        sys.exit()  
   
 if not os.path.exists(raw_dir):
     if rank == 0:
