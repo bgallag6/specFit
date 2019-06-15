@@ -131,7 +131,7 @@ else:
 
 if int(sys.version[0]) != 3:
     if rank == 0:
-        sys.exit("Please use Python 3")
+        sys.exit("Python 3 is required if rank == 0")
     else:
         sys.exit()  
   

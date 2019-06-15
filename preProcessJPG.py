@@ -33,7 +33,7 @@ import argparse
 parser = argparse.ArgumentParser(description='preProcessJPG.py')
 parser.add_argument('--processed_dir', type=str)
 parser.add_argument('--raw_dir', type=str)
-parser.add_argument('--Nfiles', type=str, default="all")
+parser.add_argument('--Nfiles', help='Number of files to process', type=str, default="all")
 
 args = parser.parse_args()
 
@@ -98,12 +98,12 @@ def datacube(flist_chunk):
             T_est = T_init*nf1  
             T_min, T_sec = divmod(T_est, 60)
             T_hr, T_min = divmod(T_min, 60)
-            print("Currently on row %i of %i, estimated time remaining: %i:%.2i:%.2i" % (count, nf1, T_hr, T_min, T_sec), flush=True)
+            print("preProcessJPG.py: Processing row %i of %i, ETR: %i:%.2i:%.2i" % (count, nf1, T_hr, T_min, T_sec), flush=True)
         else:
             T_est2 = T2*(nf1-count)
             T_min2, T_sec2 = divmod(T_est2, 60)
             T_hr2, T_min2 = divmod(T_min2, 60)
-            print("Currently on row %i of %i, estimated time remaining: %i:%.2i:%.2i" % (count, nf1, T_hr2, T_min2, T_sec2), flush=True)
+            print("preProcessJPG.py: Processing row %i of %i, ETR: %i:%.2i:%.2i" % (count, nf1, T_hr2, T_min2, T_sec2), flush=True)
         T1 = T
 
     np.save('%s/chunk_%i_of_%i' % (processed_dir, rank+1, size), dCube)
@@ -124,10 +124,11 @@ else:
 
 fmt = "%Y:%m:%d %H:%M:%S"
 
-# create a list of all the jpg files
+# create a list of all the jpg files in raw_dir
 flist = sorted(glob.glob('%s/*.jpg' % raw_dir))
 
 if Nfiles != "all":
+    assert int(Nfiles) <= len(flist), "Nfiles must be <= %d " % len(flist)
     flist = flist[0:int(Nfiles)]
     
 nf = len(flist)
@@ -146,9 +147,10 @@ start = timer()
 ex, t, v_avg = datacube( subcube )  # derotate all FITS files in chunk
 
 # Gather all results
-all_ex = comm.gather(ex, root=0)
-all_t = comm.gather(t, root=0)
-all_v_avg = comm.gather(v_avg, root=0)
+if havempi:
+    all_ex = comm.gather(ex, root=0)
+    all_t = comm.gather(t, root=0)
+    all_v_avg = comm.gather(v_avg, root=0)
 
 # Have one node stack the results
 if rank == 0:
@@ -170,13 +172,18 @@ if rank == 0:
         else:
             v_avg_arr += all_v_avg[j]
     v_avg_arr /= nf
-  
+
+    print("preProcessJPG.py: Saving %s/exposures.npy" % processed_dir)
     np.save('%s/exposures.npy' % processed_dir, ex_arr)
+
+    print("preProcessJPG.py: Saving %s/timestamps.npy" % processed_dir)
     np.save('%s/timestamps.npy' % processed_dir, tArr)
+
+    print("preProcessJPG.py: Saving %s/visual.npy" % processed_dir)
     np.save('%s/visual.npy' % processed_dir, v_avg_arr)
   
     # Load, stack, and save dataCube chunks    
-    print("Merging dataCube chunks...", flush=True)
+    print("preProcessJPG.py: Merging dataCube chunks...", flush=True)
     
     cube_temp = []
     
@@ -191,21 +198,23 @@ if rank == 0:
     del cube_temp
     
     # delete temporary chunks
-    print("Deleting temporary files...", flush=True)
+    print("preProcessJPG.py: Removing temporary files ...", flush=True)
     
     for j in range(size):
         
         fn = '%s/chunk_%i_of_%i.npy' % (processed_dir, j+1, size)
         
         # if file exists, delete it
-        if os.path.isfile(fn): os.remove(fn)
-    
-    print("Saving final dataCube...", flush=True)
+        if os.path.isfile(fn):
+            os.remove(fn)
+            print("preProcessJPG.py: Removing %s" % fn)
+
+    print("preProcessJPG.py: Saving final dataCube in %s" % '%s/dataCube.npy' % processed_dir)
     
     np.save('%s/dataCube.npy' % processed_dir, cube_final)
   
     T_final = timer() - start
     T_min_final, T_sec_final = divmod(T_final, 60)
     T_hr_final, T_min_final = divmod(T_min_final, 60)
-    print("Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)   
+    print("preProcessJPG.py: Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)
     #print("Just finished region: %s %iA" % (date, wavelength), flush=True)
