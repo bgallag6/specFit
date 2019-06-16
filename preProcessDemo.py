@@ -8,34 +8,36 @@ import os
 from PIL import Image
 import numpy as np
 
-N = 256 # Number of images to create
+#N = 256 # Number of images to create
 prefix = 'preProcessDemo' # Image file name prefix.
-Nx = 5 # Number of pixels in x 
-Ny = 5 # Number of pixels in y
+Nx = 7 # Number of pixels in x 
+Ny = 7 # Number of pixels in y
 
 import argparse
 parser = argparse.ArgumentParser(description='preProcessDemo.py')
 parser.add_argument('--processed_dir', type=str, default='./images/processed/demo')
 parser.add_argument('--raw_dir', type=str, default='./images/raw/demo')
+parser.add_argument('--Nfiles', type=int, default=256)
 args = parser.parse_args()
 raw_dir = args.raw_dir
 processed_dir = args.processed_dir
+N = args.Nfiles
 
 if not os.path.exists(raw_dir): os.makedirs(raw_dir)
 if not os.path.exists(processed_dir): os.makedirs(processed_dir)
 
 ###########################################################################
 # Create images
-type = 1
+typ = 1
 imarray = np.zeros((Nx,Ny), dtype=np.uint8)
 T = float(N)
 for i in range(0,N):
     arr = imarray
     t = float(i)
-    if type == 1:
+    if typ == 1:
         # Single period
         tmp = np.sin(4*np.pi*t/T)
-    elif type == 2:
+    elif typ == 2:
         # Power law
         f = np.arange(2,128,2)
         tmp = 0
@@ -64,7 +66,7 @@ exposures = []
 for i in range(0,N):
     # Normally we would read timestamp from Exif metadata in file
     # and convert to an integer.
-    timestamps.append(i)
+    timestamps.append(i*2)
     
     exposures.append(1.0)
 
