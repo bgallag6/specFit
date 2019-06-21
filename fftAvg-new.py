@@ -1,25 +1,29 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr  4 13:28:45 2018
+Created on Tue Apr 10 09:49:17 2018
 
 @author: Brendan
 
 Usage:
-  python specFit.py --processed_dir DIR --config [specFit_config.yaml] [--mmap_spectra [True]|False]
-or
-  mpiexec -n N python specFit.py ...
-where N = number of processors.
+  python fftAvg.py --processed_dir DIR [--time_step 1] [--mmap_datacube True] [--num_segments 2]
+To use mpi, use
+  mpiexec -n N python fftAvg.py ...
+where N = number of processors
 """
 
-from timeit import default_timer as timer
+"""
+#######################################################
+### FFT segment averaging + 3x3 Pixel Box Averaging ###
+#######################################################
+"""
+
 import numpy as np
-from scipy.optimize import curve_fit as Fit
-import yaml
-from specModel import M1, M2         
+from timeit import default_timer as timer
+from scipy import fftpack
 import time
 import datetime
-import os   
-import sys     
+import sys
+import os
 
 havempi = True
 try:
@@ -27,135 +31,104 @@ try:
 except:
   havempi = False
 
-import argparse
-parser = argparse.ArgumentParser(description='specFit.py')
-parser.add_argument('--processed_dir', type=str)
-parser.add_argument('--mmap_spectra', type=str, default=True)
-parser.add_argument('--config', type=str, default='specFit_config.yaml')
-args = parser.parse_args()
+def cfg():
 
-processed_dir = args.processed_dir
-mmap_spectra = args.mmap_spectra
-config = args.config
-
-with open(config, 'r') as stream:
-    cfg = yaml.load(stream)
-
-M1_low = cfg['M1_low']
-M1_high = cfg['M1_high']
-M2_low = cfg['M2_low']
-M2_high = cfg['M2_high']
-spec_unc = cfg['spec_unc']
-M1_guess = cfg['M1_guess']
-M2_guess = cfg['M2_guess']
-
-def specFit( subcube, subcube_StdDev ):
-        
-  params = np.zeros((subcube.shape[0], subcube.shape[1], 9))
-  
-  start_sub = timer()
-  T1 = 0
-   
-  for l in range(subcube.shape[0]): 
-    for m in range(subcube.shape[1]):
-                                               
-        f = freqs
-        s = subcube[l][m]
-        
-        # ---- use pixel-box std.dev. or adhoc method as fitting uncertainties
-        if spec_unc == 'stddev':
-            ds = subcube_StdDev[l][m]     
-        elif spec_unc in ['adhoc', 'constant']:
-            ds = subcube_StdDev
-                                     
-        # ---- fit models to spectra using SciPy's Levenberg-Marquart method
+    import argparse
+    parser = argparse.ArgumentParser(description='fftAvg.py')
+    parser.add_argument('--processed_dir', type=str)
+    parser.add_argument('--num_segments', type=int, default=2)
+    parser.add_argument('--time_step', type=str, default='mode')
+    parser.add_argument('--mmap_datacube', type=bool, default=True)
+    parser.add_argument('--box_avg_size', type=int, default=3)
+    args = parser.parse_args()
+    
+    processed_dir = args.processed_dir
+    num_segments = args.num_segments
+    mmap_datacube = args.mmap_datacube
+    box_avg_size = args.box_avg_size
+    tStep = args.time_step
+    if tStep != "mode" and tStep != "min":
         try:
-            m1_param = Fit(M1, f, s, p0=M1_guess, bounds=(M1_low, M1_high), 
-                           sigma=ds, method='dogbox')[0]
-                  
-        except RuntimeError: pass
-        except ValueError: pass
-        
-        # ---- first fit M2 model using 'dogbox' method          
-        try:                                           
-            m2_param0 = Fit(M2, f, s, p0=M2_guess, bounds=(M2_low, M2_high), 
-                            sigma=ds, method='dogbox', max_nfev=3000)[0]
-        
-        except RuntimeError: pass
-        except ValueError: pass
-        
-        
-        # ---- next fit M2 model using default 'trf' method
-        try:            
-            m2_param = Fit(M2, f, s, p0=m2_param0, bounds=(M2_low, M2_high), 
-                           sigma=ds, max_nfev=3000)[0]
+            tStep = float(tStep)
+        except:
+            raise ValueError("time_step must be a float or 'min' or 'mode'")
+    
+    if rank == 0:
+        print('Using:\n' + 'processed_dir = %s,\n' % processed_dir +
+              'num_segments = %s, ' % num_segments +
+              'pixel-box size = %s,\n' % box_avg_size +
+              'time_step = %s, ' % str(tStep) + 
+              'mmap_datacube = %s' % str(mmap_datacube), flush=True)
 
-        except RuntimeError: pass
-        except ValueError: pass
-                       
-        # ---- create model functions from fitted parameters
-        m1_fit = M1(f, *m1_param)        
-        m2_fit = M2(f, *m2_param)      
-        
-        #weights = subcube_StdDev[l][m]
-        
-        residsM1 = (s - m1_fit)
-        chisqrM1 =  ((residsM1/ds)**2).sum()
-        redchisqrM1 = chisqrM1 / float(f.size-3)  
-        
-        residsM2 = (s - m2_fit)
-        chisqrM2 = ((residsM2/ds)**2).sum()
-        redchisqrM2 = chisqrM2 / float(f.size-6)         
-        
-        f_test = ((chisqrM1-chisqrM2)/(6-3))/((chisqrM2)/(f.size-6))
-        
-        # ---- extract the lorentzian-amplitude scaling factor  
-        amp_scale = m2_param[3] / M1(np.exp(m2_param[4]), *m2_param[:3])
-        
-        
-        if chisqrM1 > chisqrM2:
-            # populate array with M2 parameters            
-            params[l][m][:6] = m2_param
-            params[l][m][6] = f_test
-            params[l][m][7] = amp_scale
-            params[l][m][8] = redchisqrM2
+    return processed_dir, num_segments, tStep, mmap_datacube, box_avg_size
+    
+def fftAvg(subcube):
+    
+    timeseries = np.empty(subcube.shape[2])
+    spectra_seg = np.zeros((subcube.shape[0],subcube.shape[1],len(freqs)))
+    
+    start_sub = timer()
+    T1 = 0    
+
+    
+    for ii in range(spectra_seg.shape[0]):
+        for jj in range(spectra_seg.shape[1]):        
             
-        else:           
-            # populate array with M1 parameters
-            params[l][m][:3] = m1_param 
-            params[l][m][3:8] = np.NaN
-            params[l][m][8] = redchisqrM1
+            # extract timeseries + normalize by exposure time
+            timeseries = subcube[ii,jj] / exposure
+            
+            # interpolate pixel-intensity values onto specified time grid
+            v_interp = np.interp(t_interp, timestamp, timeseries)  
+            
+            avg_array = np.zeros((len(freqs)))
+            
+            # trim timeseries to be integer multiple of num_segments
+            v_interp = v_interp[0:len(v_interp)-rem]  
+            split = np.split(v_interp, num_segments)
+            # perform Fast Fourier Transform on each segment
+            for i in range(num_segments):     
+              sig = split[i]
+              sig_fft = fftpack.fft(sig)
+              #sig_fft = fftpack.rfft(sig)  # real-FFT                
+              powers = np.abs(sig_fft)[pidxs]
+              if sig.std() != 0:
+                  powers = ((powers/len(sig))**2)*(1./(sig.std()**2))*2  # normalize
+              avg_array += powers
+            
+            avg_array /= num_segments  # average fourier power of the segments
+                       
+            spectra_seg[ii][jj] = np.transpose(avg_array) 
         
-        
-    # ---- estimate time remaining and print to screen
-    T = timer()
-    T2 = T - T1
-    if l == 0:
-        T_init = T - start_sub
-        T_est = T_init*(subcube.shape[0])  
-    else:
-        T_est = T2*(subcube.shape[0]-l)
-    T_min, T_sec = divmod(T_est, 60)
-    T_hr, T_min = divmod(T_min, 60)
-    if l == 0:
+         
+        # estimate time remaining and print to screen
+        T = timer()
+        T2 = T - T1     
+        if ii == 0:
+            T_init = T - start_sub
+            T_est = T_init*(spectra_seg.shape[0])      
+        else:
+            T_est = T2*(spectra_seg.shape[0]-ii)        
+        T_min, T_sec = divmod(T_est, 60)
+        T_hr, T_min = divmod(T_min, 60)   
+        if ii == 0:
             start_time = (T_hr, T_min, T_sec)
             
-    print("Thread %i on row %i/%i, ETR: %i:%.2i:%.2i" % 
-          (rank, l, subcube.shape[0], T_hr, T_min, T_sec), flush=True)
-    T1 = T
+        print("Thread %i on row %i/%i, ETR: %i:%.2i:%.2i" % 
+              (rank, ii, spectra_seg.shape[0], T_hr, T_min, T_sec), flush=True)      
+        T1 = T
+             
+    # print estimated and total program time to screen 
+    print("Beginning est. time = %i:%.2i:%.2i" % start_time, flush=True)
+    T_act = timer() - start_sub
+    T_min, T_sec = divmod(T_act, 60)
+    T_hr, T_min = divmod(T_min, 60)
+    print("Actual total time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True) 
+    return spectra_seg
 
-  # ---- print estimated and total program time to screen        
-  print("Beginning est. time = %i:%.2i:%.2i" % start_time, flush=True)
-  T_act = timer() - start_sub
-  T_min, T_sec = divmod(T_act, 60)
-  T_hr, T_min = divmod(T_min, 60)
-  print("Actual total time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True) 
-			
-  return params
-	
 
-##############################################################################
-##############################################################################
+"""
+# Setup MPI and load datacube, time, and exposure arrays
+"""  
 
 if havempi:
   # Get_size() pulls from "-n N" specified on command line
@@ -166,88 +139,141 @@ else:
   comm = None
   rank = 0
   size = 1
-  
 
-start = timer()
+(processed_dir, num_segments, tStep, mmap_datacube, box_avg_size) = cfg()
 
-haveUnc = True
-if not os.path.exists(os.path.join(processed_dir,'specUnc.npy')):
-    haveUnc = False
-    spec_unc = 'constant'
+start = timer() 
 
 if rank == 0:
     tStart0 = datetime.datetime.fromtimestamp(time.time())
     tStart = tStart0.strftime('%Y-%m-%d %H:%M:%S')
 
 try:
-    if mmap_spectra == True:
-        # load memory-mapped array as read-only
-        cube = np.load('%s/specCube.npy' % processed_dir, mmap_mode='r')
-        if haveUnc:
-            cube_StdDev = np.load('%s/specUnc.npy' % processed_dir, mmap_mode='r')
-    else:
-        cube = np.load('%s/specCube.npy' % processed_dir)
-        if haveUnc:
-            cube_StdDev = np.load('%s/specUnc.npy' % processed_dir)
+    if mmap_datacube == True:
+        cube = np.load('%s/dataCube.npy' % processed_dir, mmap_mode='r')
+    else: 
+        cube = np.load('%s/dataCube.npy' % processed_dir)
     
-    freqs = np.load('%s/frequencies.npy' % processed_dir)
+    timestamp = np.load('%s/timestamps.npy' % processed_dir)
+    exposure = np.load('%s/exposures.npy' % processed_dir)
+    vis0 = np.load('%s/visual.npy' % processed_dir)
 except FileNotFoundError: 
     if rank == 0:
         sys.exit("Files not found.  Exiting...")
     else: sys.exit()
-    
-# ---- assign equal weights to all parts of curve & use as fitting uncertainties
-df = np.log10(freqs[1:len(freqs)]) - np.log10(freqs[0:len(freqs)-1])
-ds = np.append(df, df[-1])
 
-# ---- Split the data based on no. of processors
-subcube = np.array_split(cube, size)[rank]
+## trim top/bottom rows of cube so it divides cleanly by the # of processors
+trim_top = int(np.floor((cube.shape[0] % size) / 2))
+trim_bot = -int(np.ceil((cube.shape[0] % size) / 2))
 
-if spec_unc == 'stddev':
-    subcube_StdDev = np.array_split(cube_StdDev, size)[rank]
-elif spec_unc == 'adhoc':
-    subcube_StdDev = ds
-elif spec_unc == 'constant':
-    subcube_StdDev = np.ones_like(cube[0][0])
+# trim region border to account for pixel-box averaging
+box_trim = ((box_avg_size-1)//2)  
 
-# verify each processor received subcube with correct dimensions (assert?)
+if rank == 0:
+    vis = vis0[trim_top+box_trim:vis0.shape[0]+trim_bot-box_trim, box_trim:vis0.shape[1]-box_trim]
+    np.save('%s/visual.npy' % processed_dir, vis)
+
+#chunks = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)
+
+#subcube = chunks[rank]
+subcube = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)[rank]
+
+if type(tStep) == float:
+    timeStep = tStep
+elif type(tStep) == str:
+    tDiff = list(np.diff(timestamp))
+    if tStep == "min":
+        timeStep = np.min(tDiff)
+    elif tStep == "mode":
+        timeStep = max(tDiff, key=tDiff.count)
+        
+# interpolate timestamps onto default-cadence time-grid
+t_interp = np.linspace(0, timestamp[-1], (timestamp[-1]//timeStep)+1)  
+ 
+# determine frequency values that FFT will evaluate   
+n = len(t_interp)
+rem = n % num_segments
+freq_size = (n - rem) // num_segments
+
+sample_freq = fftpack.fftfreq(freq_size, d=timeStep)
+
+pidxs = np.where(sample_freq > 0)
+
+if freq_size % 2 == 0: # Even time series length. Keep f = -0.5 value.
+    pidxs = np.append(pidxs,[pidxs[0][-1]+1])
+
+freqs = sample_freq[pidxs]
+if freq_size % 2 == 0:
+    freqs[-1] = -freqs[-1]
+
+## Each processor runs function on subcube, results are gathered when finished
+
+# verify each processor received subcube with correct dimensions
 ss = np.shape(subcube)
 print("Processor", rank, "received an array with dimensions", ss, flush=True)
 
-params_T = specFit( subcube, subcube_StdDev )
+spectra_seg_part = fftAvg(subcube)
+
+#from matplotlib import pyplot as plt
+#import pdb; pdb.set_trace()            
 
 if havempi:
-    newData_p = comm.gather(params_T, root=0)  # gather all results
-
-# ---- Have one node stack the results
+    spectra_seg = None 
+    
+    # allocate receive buffer  
+    if rank == 0:
+        spectra_seg = np.empty((cube.shape[0]-(trim_top-trim_bot), cube.shape[1], 
+                                len(freqs)), dtype='float64')
+    
+    # Gather all the results
+    comm.Gather(sendbuf=spectra_seg_part, recvbuf=spectra_seg, root=0)
+else:
+    spectra_seg = spectra_seg_part
+    
+# Have one node do the last bit
 if rank == 0:
-    if havempi:
-        stack_p = np.vstack(newData_p)
-    else:
-        stack_p = params_T
-    print(stack_p.shape, flush=True)  # Verify dimensions match input cube
- 
+
+    ## Pixel-box averaging
+    temp = np.zeros((box_avg_size**2,spectra_seg.shape[2]))
+    spectra_array = np.zeros((spectra_seg.shape[0]-(box_trim*2), spectra_seg.shape[1]-(box_trim*2), spectra_seg.shape[2]))
+    if box_avg_size > 1:
+        spectra_StdDev = np.zeros((spectra_seg.shape[0]-(box_trim*2), spectra_seg.shape[1]-(box_trim*2), spectra_seg.shape[2]))
+    
+    # calculate pixel-box average, modified range to deal with edges
+    for l in range(box_trim,spectra_seg.shape[0]-box_trim):
+        for m in range(box_trim,spectra_seg.shape[1]-box_trim):
+            
+            count = 0
+            
+            for l1 in range(-box_trim, box_trim+1, 1):
+                for m2 in range(-box_trim, box_trim+1, 1):
+                    
+                    temp[count] = spectra_seg[l+l1][m+m2]
+                    count += 1          
+            
+            spectra_array[l-box_trim][m-box_trim] = np.average(temp, axis=0)
+            if box_avg_size > 1:
+                spectra_StdDev[l-box_trim][m-box_trim] = np.std(temp, axis=0)
+
     T_final = timer() - start
     T_min_final, T_sec_final = divmod(T_final, 60)
     T_hr_final, T_min_final = divmod(T_min_final, 60)
-    print("Total program time = %i:%.2i:%.2i" % (T_hr_final, T_min_final, T_sec_final), flush=True)   
-  
-    print("Saving files...", flush=True)
-    np.save('%s/param.npy' % processed_dir, stack_p)
-  
+    print("Total program time = %i sec" % T_final, flush=True)
+    
+    print("Saving files to %s" % processed_dir, flush=True)
+    np.save('%s/specCube.npy' % processed_dir, spectra_array)
+    if box_avg_size > 1:
+        np.save('%s/specUnc.npy' % processed_dir, spectra_StdDev)
+    np.save('%s/frequencies.npy' % processed_dir, freqs)
+    
     tEnd0 = datetime.datetime.fromtimestamp(time.time())
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
     scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
-  
+    
     with open('log.txt', 'a+') as file:
-        file.write("%s: Spectra Fitting" % scriptName + "\n")
-        file.write("------------------------" + "\n")
-        file.write("M1 parameter bounds (low): %s" % M1_low + "\n")
-        file.write("M1 parameter bounds (high): %s" % M1_high + "\n")
-        file.write("M1 initial parameter guess: %s" % M1_guess + "\n")
-        file.write("M2 parameter bounds (low): %s" % M2_low + "\n")
-        file.write("M2 parameter bounds (high): %s" % M2_high + "\n")
-        file.write("M2 initial parameter guess: %s" % M2_guess + "\n")
-        file.write("Spectra-fitting uncertainties: %s" % spec_unc + "\n")
+        file.write("%s: FFT & Pixel-Box Averaging" % scriptName + "\n")
+        file.write("----------------------------" + "\n")
+        file.write("Number of time segments: %i" % num_segments + "\n")
+        file.write("Pixel-box size: %i" % box_avg_size + "\n")
         file.write("Program start time: %s" % tStart + "\n")
         file.write("Program end time: %s" % tEnd + "\n\n")
