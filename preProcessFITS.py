@@ -291,7 +291,7 @@ if rank == 0:
     scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
   
     #with open('%s_%i_region_details.txt' % (date, wavelength), 'w') as file:
-    with open('log.txt', 'a+') as file:
+    with open('%s/log.txt' % processed_dir, 'a+') as file:
         file.write("Region Details" + "\n")
         file.write("==============" + "\n\n")
         #file.write("Date: %s" % date + "\n")

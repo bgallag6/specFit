@@ -99,7 +99,7 @@ def fftAvg(subcube):
 
             spectra_seg[ii][jj] = np.transpose(avg_array)
 
-            # estimate time remaining and print to screen
+        # estimate time remaining and print to screen
         T = timer()
         T2 = T - T1
         if ii == 0:
@@ -109,20 +109,9 @@ def fftAvg(subcube):
             T_est = T2 * (spectra_seg.shape[0] - ii)
         T_min, T_sec = divmod(T_est, 60)
         T_hr, T_min = divmod(T_min, 60)
-        if ii == 0:
-            start_time = (T_hr, T_min, T_sec)
-
         print("Thread %i on row %i/%i, ETR: %i:%.2i:%.2i" %
               (rank, ii, spectra_seg.shape[0], T_hr, T_min, T_sec), flush=True)
         T1 = T
-
-    # print estimated and total program time to screen
-    # TODO: What is point of this next print statement?
-    print("Beginning est. time = %i:%.2i:%.2i" % start_time, flush=True)
-    T_act = timer() - start_sub
-    T_min, T_sec = divmod(T_act, 60)
-    T_hr, T_min = divmod(T_min, 60)
-    print("Actual total time = %i:%.2i:%.2i" % (T_hr, T_min, T_sec), flush=True)
 
     return spectra_seg
 
@@ -132,9 +121,6 @@ Set-up MPI and load datacube, time, and exposure arrays from .npy files
 """
 
 if havempi:
-    # TODO: What if mpi4py is found but user did not launch using
-    #   mpiexec -n N python ...
-    # ?
     # Get_size() pulls from "-n N" specified on command line
     comm = MPI.COMM_WORLD  # Set up comms
     rank = comm.Get_rank()  # Each processor gets its own "rank"
@@ -167,27 +153,21 @@ except FileNotFoundError:
     else:
         sys.exit(1)
 
-# TODO: Warn if any trimming performed.
 # trim top/bottom rows of cube so it divides cleanly by the # of processors
 trim_top = int(np.floor((cube.shape[0] % size) / 2))
 trim_bot = -int(np.ceil((cube.shape[0] % size) / 2))
+if trim_top or trim_bot:
+    print("Trimming dataCube: trimCube = dataCube[%d:%d]" % (trim_top, trim_bot))
 
 # trim region border to account for pixel-box averaging
 box_trim = ((box_avg_size - 1) // 2)
 
 if rank == 0:
-    print("Reading time-averaged image file %s/visual-trimmed.npy" % processed_dir)
+    print("Reading time-averaged image file %s/visual.npy" % processed_dir)
     vis = vis0[trim_top + box_trim:vis0.shape[0] + trim_bot - box_trim, box_trim:vis0.shape[1] - box_trim]
-    # TODO: This will over-write previously computed visual.npy.
-    #       Give it a different name, e.g., visual-trimmed.npy?
-    np.save('%s/visual.npy' % processed_dir, vis)
+    np.save('%s/visual-trimmed.npy' % processed_dir, vis)
     print("Saving trimmed time-averaged image file %s/visual-trimmed.npy" % processed_dir)
 
-# TODO: Remove this line or add comment for why it is commented out?
-# chunks = np.array_split(cube[trim_top:cube.shape[0]+trim_bot], size, axis=0)
-
-# TODO: Remove this line or add comment for why it is commented out?
-# subcube = chunks[rank]
 subcube = np.array_split(cube[trim_top:cube.shape[0] + trim_bot], size, axis=0)[rank]
 
 if type(tStep) == float:
@@ -289,9 +269,8 @@ if rank == 0:
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
     scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
-    # TODO: Save log file to same directory as output files
     # TODO: Why is this appending? Would think one run = one log file.
-    with open('log.txt', 'a+') as f:
+    with open('%s/log.txt' % processed_dir, 'a+') as f:
         f.write("%s: FFT & Pixel-Box Averaging" % scriptName + "\n")
         f.write("----------------------------" + "\n")
         f.write("Number of time segments: %i" % num_segments + "\n")

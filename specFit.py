@@ -239,7 +239,7 @@ if rank == 0:
     tEnd = tEnd0.strftime('%Y-%m-%d %H:%M:%S')
     scriptName = os.path.splitext(os.path.basename(sys.argv[0]))[0]
   
-    with open('log.txt', 'a+') as file:
+    with open('%s/log.txt' % processed_dir, 'a+') as file:
         file.write("%s: Spectra Fitting" % scriptName + "\n")
         file.write("------------------------" + "\n")
         file.write("M1 parameter bounds (low): %s" % M1_low + "\n")
