@@ -6,7 +6,7 @@ install_requires = ["astropy==2.0.3",
                     "numpy==1.11.2",
                     "scipy==0.18.1",
                     "sunpy==0.8.4",
-                    "PyYAML==0.1.7",
+                    "PyYAML==5.4",
                     "Pillow"]
 
 setup(
