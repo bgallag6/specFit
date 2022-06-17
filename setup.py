@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 # TODO: Relax allowed versions
 install_requires = ["astropy==2.0.3",
                     "matplotlib==1.5.1",
-                    "numpy==1.11.2",
+                    "numpy==1.21.0",
                     "scipy==0.18.1",
                     "sunpy==0.8.4",
                     "PyYAML==0.1.7",
